@@ -14,13 +14,11 @@ import pickle
 from tqdm import tqdm
 from scipy.misc import bytescale
 import multiprocessing
-import tkinter as tk
-from tkinter import filedialog
 import pandas as pd
 import itertools
 from matplotlib.patches import Rectangle
-from matplotlib.animation import FuncAnimation
-from tkinter import messagebox
+from matplotlib.animation import ArtistAnimation
+from matplotlib import gridspec
 
 def hough_circle_image(img,dp,mindist,param1,param2,minr,maxr):
     img = bytescale(img)
@@ -175,24 +173,6 @@ def display_image_sequence(image_stack,string):
      pylab.draw()
    plt.close()
 
-def update_line(num,data,data2,line,line2):
-    line.set_data(data[0,:num],data[1,:num])
-    line2.set_data(data2[0, :num], data2[1, :num])
-    return line, line2,
-
-
-root = tk.Tk()
-root.withdraw()
-
-Original_Image_path = filedialog.askopenfilename()
-
-root = tk.Tk()
-root.withdraw()
-
-Intensity_Image_path = filedialog.askopenfilename()
-
-image = io.imread(Original_Image_path)
-intensity_image = io.imread(Intensity_Image_path)
 
 
 # Define a class to store and process the time series Images
@@ -236,12 +216,6 @@ class Image_Stacks:
 
          self.width = line_selection.dist
          self.height = line_selection.dist
-
-         print(self.point)
-         print(self.height)
-         print(self.width)
-
-
 
      def stack_enhance_blur(self):
          num_len = self.Image_stack.shape[0]
@@ -328,25 +302,51 @@ class Image_Stacks:
        Radius_with_Time.append(Radius_data)
        Radius_with_Time = np.array(Radius_with_Time)
 
-       fig,ax = plt.subplots()
-       ax.set_xlabel('Time Points')
-       ax.set_ylabel('Protein Fluorescence Intensity')
-       ax.set_xlim(0,(len(Intensity_data)+1))
-       ax.set_ylim(-800,(np.max(Intensity_data)+300))
-       l_one, =ax.plot([], [], 'r-')
+       gs = gridspec.GridSpec(2,2)
+       fig = plt.figure(figsize = (10,10))
+       ax1 = fig.add_subplot(gs[0:1,0:1])
+       ax2 = fig.add_subplot(gs[0:1,1:2])
+       ax3 = fig.add_subplot(gs[1:2,:])
 
-       ax2= ax.twinx()
-       l_two, =ax2.plot([], [], 'b-')
+       ax1.set_title('Vesicles Radius Changes',fontsize=18)
+       ax2.set_title('Vesicles Protein Bindings Changes',fontsize=18)
 
-       ax2.set_xlabel('Time Points')
-       ax2.set_ylabel('Radius Changes')
-       ax2.set_xlim(0,(len(Radius_data)+1))
-       ax2.set_ylim((np.min(Radius_data)-1),(np.max(Radius_data)+1))
 
-       ax.legend((l_one,l_two),('Protein Binding Intensity','Radius'),loc=0)
-       self.line_ani= FuncAnimation(fig, update_line, frames = len(Intensity_data), fargs=(Intensity_with_Time,Radius_with_Time,l_one,l_two),interval=100, blit=True, repeat=False)
+       ax3.set_xlabel('Time Points', fontsize = 16, fontweight = 'bold')
+       ax3.set_ylabel('Protein Fluorescence Intensity', fontsize = 16,fontweight = 'bold')
+       ax3.set_xlim(0,(len(Intensity_data)+1))
+       ax3.set_ylim(-800,(np.max(Intensity_data)+300))
+       #l_one, =ax3.plot([], [], 'r-')
+
+       ax4= ax3.twinx()
+       #l_two, =ax4.plot([], [], 'b-')
+
+       ax4.set_xlabel('Time Points', fontsize = 16, fontweight = 'bold')
+       ax4.set_ylabel('Radius Changes',fontsize = 16, fontweight = 'bold')
+       ax4.set_xlim(0,(len(Radius_data)+1))
+       ax4.set_ylim((np.min(Radius_data)-1),(np.max(Radius_data)+1))
+
+       #self.line_ani= FuncAnimation(fig, update_line, frames = len(Intensity_data), fargs=(Intensity_with_Time,Radius_with_Time,l_one,l_two),interval=100, blit=True, repeat=False)
+
+       ims = []
+
+       for time in range(len(Intensity_data)):
+           GUV_im = ax1.imshow(self.Crop_Original_Stack[time],cmap = 'Reds')
+           ax1.axis('off')
+           Intensity_im = ax2.imshow(self.Crop_Intensity_Stack[time],cmap = 'Greens')
+           ax2.axis('off')
+
+           l_one, = ax3.plot(Intensity_with_Time[0,:time],Intensity_with_Time[1,:time],'r-')
+           l_two, = ax4.plot(Radius_with_Time[0,:time],Radius_with_Time[1,:time],'b-')
+           ax3.legend((l_one,l_two),('Protein Fluorescence Intensity','Radius'),loc=0)
+
+
+           ims.append([GUV_im,Intensity_im,l_one,l_two])
+
+       self.line_ani = ArtistAnimation(fig,ims, interval=100,blit=False,repeat=True)
+       plt.tight_layout()
+
        plt.show()
-       plt.close()
 
 
 
@@ -365,7 +365,6 @@ class line_drawing():
         self.lines = []
 
     def draw_line(self):
-        self.ax.imshow(image[0,:,:])
 
         xy = plt.ginput(2)
 
@@ -388,33 +387,3 @@ class line_drawing():
         self.dist = np.linalg.norm(np.array(self.center) - np.array(self.end))
 
         self.lines.append(line)
-
-
-
-test = Image_Stacks(image,intensity_image)
-
-test.set_parameter()
-
-test.stack_enhance_blur()
-
-test.set_points()
-
-test.tracking_single_circle()
-
-test.stats_df.to_csv('stats_df.csv')
-
-test.displaying_circle_movies()
-
-
-display_image_sequence(test.Rendering_Image_Stack,'Display Original Images')
-display_image_sequence(test.Rendering_Intensity_Image,'Display Intensity Images')
-
-display_image_sequence(test.Crop_Original_Stack,'Display Crop Original Images')
-display_image_sequence(test.Crop_Intensity_Stack,'Display Crop Intensity Images')
-
-test.live_plotting_intensity()
-
-answer = messagebox.askyesnocancel("Question","Do you want to save plot as movie?")
-
-if answer==True:
-    test.line_ani.save('Dynamic_Plotting.mp4',fps=10)
