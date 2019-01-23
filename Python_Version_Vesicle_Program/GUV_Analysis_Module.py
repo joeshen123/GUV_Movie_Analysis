@@ -9,25 +9,104 @@ import cv2
 from skimage import filters
 from skimage import color
 from skimage import feature
-import PIL
-import pickle
+from skimage import morphology
 from tqdm import tqdm
 from scipy.misc import bytescale
-import multiprocessing
 import pandas as pd
 import itertools
 from matplotlib.patches import Rectangle
 from matplotlib.animation import ArtistAnimation
 from matplotlib import gridspec
+from matplotlib.pyplot import cm
+from skimage.filters import threshold_otsu, threshold_adaptive
+import tkinter as tk
+from tkinter import filedialog
+from skimage import measure
+import seaborn as sns
 
-def hough_circle_image(img,dp,mindist,param1,param2,minr,maxr):
-    img = bytescale(img)
 
-    circles = cv2.HoughCircles(img,cv2.HOUGH_GRADIENT,dp,mindist,
-                                param1=param1,param2=param2,minRadius=minr,maxRadius=maxr)
+# define a function to find the border of a circle (assume the edge is the brightest)
+def circle_edge_detector(center, distance, image):
+    theta = np.linspace(0., 2*np.pi)
+    x0,y0 = center
 
-    return circles
+    x_list = distance*np.cos(theta) + x0
+    y_list = distance*np.sin(theta) + y0
 
+    end_list = []
+
+    for n in range(len(theta)):
+        end = (x_list[n],y_list[n])
+        end_list.append(end)
+
+    x_edge_list = []
+    y_edge_list = []
+
+    for end in end_list:
+        lineprofile, x,y = line_pixel_extractor(center, end, 1000, image)
+        max_num = np.argmax(lineprofile)
+
+        test_dist = np.linalg.norm(np.array((x[max_num], y[max_num])) - center)
+
+        if test_dist >= 0.7*distance and test_dist <= 1.05*distance:
+          x_edge_list.append(x[max_num])
+          y_edge_list.append(y[max_num])
+
+
+    edge_list = np.column_stack([np.array(y_edge_list),np.array(x_edge_list)])
+
+    return edge_list
+
+
+#Define a function to obtain all pixels in a line
+def line_pixel_extractor(start,end,num,image):
+    x0,y0=start
+    x1,y1 =end
+    x,y = np.linspace(x0,x1,num),np.linspace(y0,y1,num)
+
+    zi = ndimage.map_coordinates(image,np.vstack((y,x)))
+
+    return zi,x,y
+
+
+# Define a function to plot both radius and protein intensity from a list of pandas df
+def Pandas_list_plotting(pandas_list, keyword):
+    fig= plt.figure(figsize = (10,6))
+    gs = gridspec.GridSpec(1,1)
+
+    ax = fig.add_subplot(gs[:,:])
+
+    list_len = len(pandas_list)
+    color = cm.tab20b(np.linspace(0,1,list_len))
+
+    if keyword == 'Intensity':
+      ax.set_title('Vesicles Protein Bindings Changes',fontsize=18)
+
+      ax.set_xlabel('Time Points', fontsize = 16, fontweight = 'bold')
+      ax.set_ylabel('Protein Fluorescence Intensity', fontsize = 16,fontweight = 'bold')
+
+      for n in range(list_len):
+         df = pandas_list[n]
+         Intensity_data = df['GFP intensity'].tolist()
+         Time_point = np.arange(len(Intensity_data))
+         ax = plt.plot(Time_point, Intensity_data, color = color[n], label = str(n))
+
+    if keyword == 'Radius':
+      ax.set_title('Vesicles Radius Changes',fontsize=18)
+
+      ax.set_xlabel('Time Points', fontsize = 16, fontweight = 'bold')
+      ax.set_ylabel('Vesicles Radius', fontsize = 16,fontweight = 'bold')
+
+      for n in range(list_len):
+         df = pandas_list[n]
+         radius_data = df['radius'].tolist()
+         Time_point = np.arange(len(radius_data))
+         ax = plt.plot(Time_point, radius_data, color = color[n], label = str(n))
+
+
+    plt.legend(loc='right')
+    plt.tight_layout()
+    plt.show()
 
 def create_circular_mask(center, radius,h=512,w=512):
 
@@ -61,6 +140,8 @@ def creating_mask(Image,center,width,height,factor=2):
 
 def generate_df_from_list(center_list,r_list,intensity_list):
 
+    Time_point_list = np.arange(len(center_list))
+
     center_list = np.array(center_list)
     center_x = center_list [:,0]
     center_y = center_list[:,1]
@@ -69,24 +150,33 @@ def generate_df_from_list(center_list,r_list,intensity_list):
 
     intensity_list = np.array(intensity_list)
 
-    stat_dict = {'center_x': center_x, 'center_y': center_y, 'radius': r_list, 'GFP intensity': intensity_list}
+    stat_dict = {'Time Point': Time_point_list,'center_x': center_x, 'center_y': center_y, 'radius': r_list, 'GFP intensity': intensity_list}
 
     stat_df = pd.DataFrame(stat_dict)
 
     return stat_df
-
-def draw_sample_points (image,Position,width=20, height=20):
+'''
+def draw_sample_points (image,Position,distance):
     #image = ndimage.median_filter(image,3)
-    mask = creating_mask(image,Position,width,height)
-    edges = feature.canny(image,sigma=5)
-    edges = edges * mask
+    #mask = creating_mask(image,Position,width,height)
+    #local_thresh = threshold_otsu(image)
+    #binary_im = image > local_thresh
+
+    #closing_im = morphology.closing(binary_im)
+
+    #plt.imshow(binary_im)
+    #plt.show()
+
+    #edges = feature.canny(binary_im,sigma=0.5)
+    #edges = edges * mask
 
     #plt.imshow(edges)
     #plt.show()
+    #points = np.column_stack(np.nonzero(edges))
 
-    points = np.array(np.nonzero(edges)).T
 
     return points
+'''
 
 #This function to enhance and blur the images. Improve contrast
 def enhance_blur_medfilter(img, enhance=True,blur=True,kernal=5,median_filter=True,size=8):
@@ -111,7 +201,7 @@ def enhance_blur_medfilter(img, enhance=True,blur=True,kernal=5,median_filter=Tr
 
 
 def fit_circle_contour(image,pt,width=20,height=20):
-    sample_points = draw_sample_points(image,pt,width,height)
+    sample_points = circle_edge_detector(pt,width, image)
     model_robust, inliers = ransac(sample_points, CircleModel,min_samples=3,residual_threshold=2,max_trials=1000)
     y,x,r = model_robust.params
     center = (x,y)
@@ -147,9 +237,8 @@ def draw_circle_fit (center,r ,image):
     ax.imshow(image)
     circle = Circle(center,radius=r,facecolor=None,fill=False,edgecolor='r',linewidth=2)
     ax.add_patch(circle)
+    plt.scatter(center[0],center[1],c = 'r')
     ax.axis('off')
-
-
     fig.canvas.draw()
 
     img = np.array(fig.canvas.renderer._renderer)
@@ -195,6 +284,7 @@ class Image_Stacks:
          self.median_filter = None
          self.size = None
          self.point = None
+         self.end = None
          self.stats_df = None
          self.width = None
          self.height = None
@@ -208,11 +298,13 @@ class Image_Stacks:
         self.size = size
 
      def set_points (self):
-         line_selection = line_drawing(self.Image_stack_median)
+         line_selection = line_drawing()
+         line_selection.show_image(self.Image_stack_median)
          line_selection.draw_line()
          plt.show()
 
          self.point = line_selection.center
+         self.end = line_selection.end
 
          self.width = line_selection.dist
          self.height = line_selection.dist
@@ -239,6 +331,7 @@ class Image_Stacks:
         iter_len = tqdm(range(num_len))
         for n in iter_len:
             iter_len.set_description('Fitting circle to original image')
+
             center,r = fit_circle_contour(self.Image_stack_median[n], self.point, self.width,self.height)
             self.point = center
             center_list.append(center)
@@ -308,8 +401,8 @@ class Image_Stacks:
        ax2 = fig.add_subplot(gs[0:1,1:2])
        ax3 = fig.add_subplot(gs[1:2,:])
 
-       ax1.set_title('Vesicles Radius Changes',fontsize=18)
-       ax2.set_title('Vesicles Protein Bindings Changes',fontsize=18)
+       ax1.set_title('GUV Radius Changes',fontsize=18)
+       ax2.set_title('Peripheral Protein Bindings Changes',fontsize=18)
 
 
        ax3.set_xlabel('Time Points', fontsize = 16, fontweight = 'bold')
@@ -343,7 +436,7 @@ class Image_Stacks:
 
            ims.append([GUV_im,Intensity_im,l_one,l_two])
 
-       self.line_ani = ArtistAnimation(fig,ims, interval=100,blit=False,repeat=True)
+       self.line_ani = ArtistAnimation(fig,ims, interval=50,blit=False,repeat=True)
        plt.tight_layout()
 
        plt.show()
@@ -352,9 +445,8 @@ class Image_Stacks:
 
 # Define a class for drawing a line for tracking
 class line_drawing():
-    def __init__(self,image):
-        self.fig, self.ax = plt.subplots()
-        self.ax.imshow(image[0,:,:])
+    def __init__(self):
+        self.fig, self.ax = None,None
         self.x0 = None
         self.y0 = None
         self.x1 = None
@@ -364,10 +456,13 @@ class line_drawing():
         self.dist = None
         self.lines = []
 
+    def show_image(self,image):
+        self.fig, self.ax = plt.subplots()
+        self.ax.imshow(image[0,:,:])
+
     def draw_line(self):
 
-        xy = plt.ginput(2)
-
+        xy = self.fig.ginput(2,timeout=0)
         x = np.array([p[0] for p in xy])
         self.x0 = x[0]
         self.x1 = x[1]
@@ -387,3 +482,32 @@ class line_drawing():
         self.dist = np.linalg.norm(np.array(self.center) - np.array(self.end))
 
         self.lines.append(line)
+'''
+root = tk.Tk()
+root.withdraw()
+
+my_filetypes = [('all files', '.*'),('Image files', '.tif')]
+
+Original_Image_path = filedialog.askopenfilename(title='Please Select a File', filetypes = my_filetypes)
+
+
+im = io.imread(Original_Image_path)
+
+
+line_selection = line_drawing()
+line_selection.show_image(im)
+line_selection.draw_line()
+plt.show()
+
+list = circle_edge_detector(line_selection.center,line_selection.dist,im[70,:,:])
+
+y,x= zip(*list)
+
+center,r = fit_circle_contour(im[70,:,:],line_selection.center,line_selection.dist)
+fig,ax = plt.subplots()
+ax.imshow(im[70,:,:])
+circle = Circle(center,radius=r,facecolor=None,fill=False,edgecolor='b',linewidth=2)
+ax.add_patch(circle)
+plt.scatter(x,y,c = 'r')
+plt.show()
+'''
