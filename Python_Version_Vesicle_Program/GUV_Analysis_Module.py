@@ -155,28 +155,23 @@ def generate_df_from_list(center_list,r_list,intensity_list):
     stat_df = pd.DataFrame(stat_dict)
 
     return stat_df
-'''
+
 def draw_sample_points (image,Position,distance):
-    #image = ndimage.median_filter(image,3)
-    #mask = creating_mask(image,Position,width,height)
-    #local_thresh = threshold_otsu(image)
-    #binary_im = image > local_thresh
+    mask = creating_mask(image,Position,width=distance,height=distance)
+    local_thresh = threshold_otsu(image)
+    binary_im = image > local_thresh
 
-    #closing_im = morphology.closing(binary_im)
+    closing_im = morphology.closing(binary_im)
 
-    #plt.imshow(binary_im)
-    #plt.show()
 
-    #edges = feature.canny(binary_im,sigma=0.5)
-    #edges = edges * mask
+    edges = feature.canny(closing_im,sigma=0.5)
+    edges = edges * mask
 
-    #plt.imshow(edges)
-    #plt.show()
-    #points = np.column_stack(np.nonzero(edges))
+    points = np.column_stack(np.nonzero(edges))
 
 
     return points
-'''
+
 
 #This function to enhance and blur the images. Improve contrast
 def enhance_blur_medfilter(img, enhance=True,blur=True,kernal=5,median_filter=True,size=8):
@@ -202,9 +197,15 @@ def enhance_blur_medfilter(img, enhance=True,blur=True,kernal=5,median_filter=Tr
 
 def fit_circle_contour(image,pt,width=20,height=20):
     sample_points = circle_edge_detector(pt,width, image)
+    
+    if len(sample_points) <= 3:
+        sample_points = draw_sample_points(image,pt,width)
+       
     model_robust, inliers = ransac(sample_points, CircleModel,min_samples=3,residual_threshold=2,max_trials=1000)
     y,x,r = model_robust.params
     center = (x,y)
+    
+
     return (center,r)
 
 def obtain_ring_pixel(center,radius,dif,image,choice='local'):
@@ -322,6 +323,10 @@ class Image_Stacks:
             self.Image_stack_enhance[n] = gaussian_blur
             self.Image_stack_median[n] = medfilter
             self.Intensity_stack_med[n] = medfilter_intensity
+    
+     def reuse_preprocessed_stack (self):
+        self.Intensity_stack_med = self.Intensity_stack
+        self.Image_stack_median = self.Image_stack
 
      def tracking_single_circle(self):
         num_len = self.Image_stack_median.shape[0]
@@ -489,7 +494,7 @@ root.withdraw()
 my_filetypes = [('all files', '.*'),('Image files', '.tif')]
 
 Original_Image_path = filedialog.askopenfilename(title='Please Select a File', filetypes = my_filetypes)
-
+ 
 
 im = io.imread(Original_Image_path)
 
