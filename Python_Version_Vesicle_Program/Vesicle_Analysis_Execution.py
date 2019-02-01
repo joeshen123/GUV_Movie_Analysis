@@ -3,6 +3,11 @@ from tkinter import filedialog
 from tkinter import messagebox
 from GUV_Analysis_Module import *
 import pickle
+import warnings
+
+#Ignore warnings issued by skimage through conversion to uint8
+warnings.simplefilter("ignore",UserWarning)
+warnings.simplefilter("ignore",RuntimeWarning)
 
 # Use tkinter to interactively select files to import
 root = tk.Tk()

@@ -8,7 +8,14 @@ import tkinter as tk
 from skimage.external import tifffile
 import matplotlib.pyplot as plt
 from skimage import io
+import cv2
+from skimage import img_as_ubyte
+from GUV_Analysis_Module import *
+import warnings
 
+#Ignore warnings issued by skimage through conversion to uint8
+warnings.simplefilter("ignore",UserWarning)
+warnings.simplefilter("ignore",RuntimeWarning)
 
 # Use tkinter to interactively select files to import
 root = tk.Tk()
@@ -19,6 +26,32 @@ my_filetypes = [('all files', '.*'),('Movie files', '.nd2')]
 Image_Stack_Path = filedialog.askopenfilename(title='Please Select a Movie', filetypes = my_filetypes)
 
 
+# Define a function to return the best plane from a stack of planes
+
+def find_perfect_plane(img_stack):
+   stack_len = img_stack.shape[0]
+   max_num = 0
+   best_n = 0
+
+   for n in range(stack_len):
+      img = img_as_ubyte(img_stack[n,:,:])
+      img = cv2.normalize(img,None,alpha=0, beta=255,norm_type=cv2.NORM_MINMAX)
+      img = cv2.equalizeHist(img)
+      img = cv2.GaussianBlur(img,(11,11),0,0)
+   
+      circles = cv2.HoughCircles(img,cv2.HOUGH_GRADIENT,0.1,30,
+                                 param1=200,param2=30,minRadius=0,maxRadius=60)
+    
+      if not (circles is None):
+        circle = np.uint16(np.around(circles))
+        circle_num = circle.shape[1]
+
+        if circle_num >= max_num:
+          max_num = circle_num
+          best_n = n
+    
+   return best_n
+
 # Define a function to convert time series of ND2 images to a numpy list of Max Intensity Projection
 # images.
 
@@ -27,7 +60,7 @@ def Z_Stack_Images_Extractor(address, fields_of_view):
    time_series = Image_Sequence.sizes['t']
    z_stack = Image_Sequence.sizes['z']
    
-   Intensity_MI_Slice = []
+   Intensity_best_Slice = []
    MI_Slice = []
    for time in tqdm(range(time_series)):
      z_stack_images = []
@@ -42,21 +75,21 @@ def Z_Stack_Images_Extractor(address, fields_of_view):
      z_stack_Intensity_images = np.array(z_stack_Intensity_images)
 
      MI = np.max(z_stack_images, axis = 0)
-     Intensity_MI = np.max(z_stack_Intensity_images, axis = 0)
-
      MI_Slice.append(MI)
-     Intensity_MI_Slice.append(Intensity_MI)
+
+     best_n = find_perfect_plane(z_stack_images)
+     Intensity_best_Slice.append(z_stack_Intensity_images[best_n,:,:])
 
    MI_Slice = np.array(MI_Slice)
-   Intensity_MI_Slice = np.array(Intensity_MI_Slice)
+   Intensity_best_Slice = np.array(Intensity_best_Slice)
 
-   return (MI_Slice, Intensity_MI_Slice)
+   return (MI_Slice, Intensity_best_Slice)
 
 FOV_num = simpledialog.askinteger("Input", "Which fields of view number you want to put ?",
                                 parent=root, minvalue = 0, maxvalue = 100)
 
 
-MI_Images, MI_Images_Intensity = Z_Stack_Images_Extractor(Image_Stack_Path,fields_of_view=FOV_num)
+MI_Images, best_Image_Intensity = Z_Stack_Images_Extractor(Image_Stack_Path,fields_of_view=FOV_num)
 
 
 #Save Max Intensity Images to tiff hyperstack for furthur analysis
@@ -65,5 +98,5 @@ File_save_names = filedialog.asksaveasfilename(parent=root,title="Please select 
 File_save_names_Intensity = File_save_names.replace(".tif", "_Intensity.tif")
 
 tifffile.imsave(File_save_names,MI_Images.astype('uint16'),bigtiff=True,metadata={'axes': 'TYX'})
-tifffile.imsave(File_save_names_Intensity,MI_Images_Intensity.astype('uint16'),bigtiff=True,metadata={'axes': 'TYX'})
+tifffile.imsave(File_save_names_Intensity,best_Image_Intensity.astype('uint16'),bigtiff=True,metadata={'axes': 'TYX'})
 
