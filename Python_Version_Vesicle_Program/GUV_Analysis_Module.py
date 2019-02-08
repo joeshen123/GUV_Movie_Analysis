@@ -197,6 +197,9 @@ def enhance_blur_medfilter(img, enhance=True,blur=True,kernal=5,median_filter=Tr
 
 def fit_circle_contour(image,pt,width=20,height=20):
     sample_points = circle_edge_detector(pt,width, image)
+
+    #print(sample_points)
+    #print(len(sample_points))
     
     if len(sample_points) <= 3:
         sample_points = draw_sample_points(image,pt,width)
@@ -208,30 +211,41 @@ def fit_circle_contour(image,pt,width=20,height=20):
 
     return (center,r)
 
-def obtain_ring_pixel(center,radius,dif,image,choice='local'):
+def obtain_ring_pixel(center,radius,dif,image,choice='global'):
     inner_ring_mask = create_circular_mask(center,radius-dif)
     outer_ring_mask = create_circular_mask(center,radius+dif)
 
     ring_mask = np.logical_xor(outer_ring_mask,inner_ring_mask)
+
+    where = np.where(ring_mask==True)
+    
+    a = image.copy()
+    a[where[0],where[1]] = 65535
+    plt.imshow(a)
+    plt.show()
+
     if choice == 'local':
-      background_outer_ring_mask = create_circular_mask(center,radius+dif+2)
-      background_inner_ring_mask = create_circular_mask(center,radius+dif+1)
+      raw_median_intensity_from_img = np.median(image[where[0],where[1]])
+
+      background_outer_ring_mask = create_circular_mask(center,radius+dif+5)
+      background_inner_ring_mask = create_circular_mask(center,radius+dif+4)
 
       background_ring_mask = np.logical_xor(background_outer_ring_mask,background_inner_ring_mask)
 
       background_where = np.where(background_ring_mask ==True)
-      background_mean_intensity = np.median(image[background_where[0],background_where[1]])
+      background_median_intensity = np.median(image[background_where[0],background_where[1]])
 
-    else:
-      background_mean_intensity = np.median(image)
+      median_intensity_from_img = raw_median_intensity_from_img - background_median_intensity
 
-    where = np.where(ring_mask==True)
-    raw_mean_intensity_from_img = np.mean(image[where[0],where[1]])
+    elif choice == 'global':
+      kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(100,100))
+      opening = cv2.morphologyEx(image, cv2.MORPH_OPEN, kernel)
+      sub_image = cv2.subtract(image,opening)
+      
+      median_intensity_from_img = np.median(sub_image[where[0],where[1]])
 
 
-    mean_intensity_from_img = raw_mean_intensity_from_img - background_mean_intensity
-
-    return mean_intensity_from_img
+    return median_intensity_from_img
 
 def draw_circle_fit (center,r ,image):
     fig,ax = plt.subplots()
@@ -290,6 +304,8 @@ class Image_Stacks:
          self.width = None
          self.height = None
          self.line_ani = None
+         self.background_center = None
+         self.background_radius = None
 
      def set_parameter (self,enhance=True, blur = True, kernal = 5,median_filter = True,size=3):
         self._enhance = enhance
@@ -309,6 +325,7 @@ class Image_Stacks:
 
          self.width = line_selection.dist
          self.height = line_selection.dist
+     
 
      def stack_enhance_blur(self):
          num_len = self.Image_stack.shape[0]
@@ -341,10 +358,11 @@ class Image_Stacks:
             self.point = center
             center_list.append(center)
             r_list.append(r)
-
+        
+        iter_len = tqdm(range(num_len))
         for n in iter_len:
             iter_len.set_description('Measuring GFP Intensities')
-            Intensity = obtain_ring_pixel(center_list[n],r_list[n],3,self.Intensity_stack_med[n],choice='global')
+            Intensity = obtain_ring_pixel(center_list[n],r_list[n],1.5,self.Intensity_stack_med[n], choice='global')
             GFP_list.append(Intensity)
 
         self.stats_df = generate_df_from_list(center_list,r_list,GFP_list)

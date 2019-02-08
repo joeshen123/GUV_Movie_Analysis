@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 from skimage import io
 import cv2
 from skimage import img_as_ubyte
-from GUV_Analysis_Module import *
 import warnings
 
 #Ignore warnings issued by skimage through conversion to uint8
@@ -39,8 +38,8 @@ def find_perfect_plane(img_stack):
       img = cv2.equalizeHist(img)
       img = cv2.GaussianBlur(img,(11,11),0,0)
    
-      circles = cv2.HoughCircles(img,cv2.HOUGH_GRADIENT,0.1,30,
-                                 param1=200,param2=30,minRadius=0,maxRadius=60)
+      circles = cv2.HoughCircles(img,cv2.HOUGH_GRADIENT,0.1,20,
+                                 param1=200,param2=30,minRadius=0,maxRadius=80)
     
       if not (circles is None):
         circle = np.uint16(np.around(circles))
@@ -55,11 +54,12 @@ def find_perfect_plane(img_stack):
 # Define a function to convert time series of ND2 images to a numpy list of Max Intensity Projection
 # images.
 
-def Z_Stack_Images_Extractor(address, fields_of_view):
+def Z_Stack_Images_Extractor(address, fields_of_view,hough_choice = 'All'):
    Image_Sequence = ND2Reader(address)
    time_series = Image_Sequence.sizes['t']
    z_stack = Image_Sequence.sizes['z']
    
+   n=0
    Intensity_best_Slice = []
    MI_Slice = []
    for time in tqdm(range(time_series)):
@@ -76,9 +76,12 @@ def Z_Stack_Images_Extractor(address, fields_of_view):
 
      MI = np.max(z_stack_images, axis = 0)
      MI_Slice.append(MI)
+     
+     if hough_choice == 'All' or (hough_choice == 'once' and n==0):
+       best_n = find_perfect_plane(z_stack_images)
 
-     best_n = find_perfect_plane(z_stack_images)
      Intensity_best_Slice.append(z_stack_Intensity_images[best_n,:,:])
+     n+=1
 
    MI_Slice = np.array(MI_Slice)
    Intensity_best_Slice = np.array(Intensity_best_Slice)
@@ -89,7 +92,7 @@ FOV_num = simpledialog.askinteger("Input", "Which fields of view number you want
                                 parent=root, minvalue = 0, maxvalue = 100)
 
 
-MI_Images, best_Image_Intensity = Z_Stack_Images_Extractor(Image_Stack_Path,fields_of_view=FOV_num)
+MI_Images, best_Image_Intensity = Z_Stack_Images_Extractor(Image_Stack_Path,fields_of_view=FOV_num, hough_choice='once')
 
 
 #Save Max Intensity Images to tiff hyperstack for furthur analysis

@@ -48,7 +48,6 @@ while button == True:
 
     
     Analysis_Stack.set_points()
-
     Analysis_Stack.tracking_single_circle()
 
     Analysis_Stack.displaying_circle_movies()
