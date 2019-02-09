@@ -5,31 +5,36 @@ import pickle
 import matplotlib.pyplot as plt
 from functools import reduce
 import pandas as pd
-#root = tk.Tk()
-#root.withdraw()
+import glob,os
+
+root = tk.Tk()
+root.withdraw()
+
+root.directory = filedialog.askdirectory()
+
+os.chdir(root.directory)
+
+df_list = []
 
 
-#my_filetypes = [('all files', '.*'),('Image files', '.pkl')]
 
-#Original_test_path = filedialog.askopenfilename(title='Please Select a File', filetypes = my_filetypes)
-#print(Original_test_path)
-pickle_in = open('/Users/joeshen/Desktop/012319 Lab Meeting Analysis/C2_rupture.pkl',"rb")
-df_list_one = pickle.load(pickle_in)
+df_filenames = glob.glob('*.pkl' )
 
-pickle_in = open('/Users/joeshen/Desktop/012319 Lab Meeting Analysis/L3233F_Rupture.pkl',"rb")
-df_list_two = pickle.load(pickle_in)
 
-pickle_in = open('/Users/joeshen/Desktop/012319 Lab Meeting Analysis/Y90F_Rupture.pkl',"rb")
-df_list_three = pickle.load(pickle_in)
+for n in range(len(df_filenames)):
+   df_name = df_filenames[n]
+   pickle_in = open(df_name,"rb")
+   
+   df_list_one = pickle.load(pickle_in)
+   df_list += df_list_one
 
-df_final_one = pd.concat(df_list_one)
-df_final_two = pd.concat(df_list_two)
-df_final_three = pd.concat(df_list_three)
+df_final = pd.concat(df_list)
+
 
 #print(df)
 sns.set_style('ticks')
-ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_one)
-ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_two)
-ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_three)
+ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final)
+#ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_two)
+#ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_three)
 plt.show()
 #plt.savefig('C2_versus_mutant_rupture.tif', dpi=400)

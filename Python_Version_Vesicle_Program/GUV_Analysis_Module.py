@@ -218,12 +218,12 @@ def obtain_ring_pixel(center,radius,dif,image,choice='global'):
     ring_mask = np.logical_xor(outer_ring_mask,inner_ring_mask)
 
     where = np.where(ring_mask==True)
-    
+    '''
     a = image.copy()
     a[where[0],where[1]] = 65535
     plt.imshow(a)
     plt.show()
-
+    '''
     if choice == 'local':
       raw_median_intensity_from_img = np.median(image[where[0],where[1]])
 
