@@ -23,9 +23,9 @@ def curve_df_combine(directory):
       df_list_one = pickle.load(pickle_in)
       df_list += df_list_one
 
-
+   print(len(df_list))
    df_final = pd.concat(df_list)
-
+   
    return df_final
 
 root = tk.Tk()
@@ -34,19 +34,24 @@ root.withdraw()
 
 root.directory = filedialog.askdirectory()
 
-df_final_one = curve_df_combine(root.directory)
+Name1 = root.directory
+label_1 = Name1.split("/")[-1].split(" ")[0]
+df_final_one = curve_df_combine(Name1)
 
 root.directory = filedialog.askdirectory()
-
-df_final_two = curve_df_combine(root.directory)
+Name2 = root.directory
+label_2 = Name2.split("/")[-1].split(" ")[0]
+df_final_two = curve_df_combine(Name2)
 
 
 
 
 #print(df)
 sns.set_style('ticks')
-ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_one)
-ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_two)
+sns.set(font_scale=1.3)
+ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_one,label=label_1)
+ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_two,label=label_2)
 #ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_three)
+ax.set_title("%s and %s Binding Profile" %(label_1, label_2))
 plt.show()
 #plt.savefig('C2_versus_mutant_rupture.tif', dpi=400)
