@@ -7,34 +7,46 @@ from functools import reduce
 import pandas as pd
 import glob,os
 
+# Make a function to combine all df together into one df. Input is the directory of all dfs
+def curve_df_combine(directory):
+   os.chdir(root.directory)
+
+   df_list = []
+
+   df_filenames = glob.glob('*.pkl' )
+
+
+   for n in range(len(df_filenames)):
+      df_name = df_filenames[n]
+      pickle_in = open(df_name,"rb")
+   
+      df_list_one = pickle.load(pickle_in)
+      df_list += df_list_one
+
+
+   df_final = pd.concat(df_list)
+
+   return df_final
+
 root = tk.Tk()
 root.withdraw()
 
+
 root.directory = filedialog.askdirectory()
 
-os.chdir(root.directory)
+df_final_one = curve_df_combine(root.directory)
 
-df_list = []
+root.directory = filedialog.askdirectory()
 
-
-
-df_filenames = glob.glob('*.pkl' )
+df_final_two = curve_df_combine(root.directory)
 
 
-for n in range(len(df_filenames)):
-   df_name = df_filenames[n]
-   pickle_in = open(df_name,"rb")
-   
-   df_list_one = pickle.load(pickle_in)
-   df_list += df_list_one
-
-df_final = pd.concat(df_list)
 
 
 #print(df)
 sns.set_style('ticks')
-ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final)
-#ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_two)
+ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_one)
+ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_two)
 #ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_three)
 plt.show()
 #plt.savefig('C2_versus_mutant_rupture.tif', dpi=400)
