@@ -201,7 +201,7 @@ def fit_circle_contour(image,pt,width=20,height=20):
     #print(sample_points)
     #print(len(sample_points))
     
-    if len(sample_points) <= 3:
+    if len(sample_points) <= 25:
         sample_points = draw_sample_points(image,pt,width)
        
     model_robust, inliers = ransac(sample_points, CircleModel,min_samples=3,residual_threshold=2,max_trials=1000)
@@ -238,7 +238,7 @@ def obtain_ring_pixel(center,radius,dif,image,choice='global'):
       median_intensity_from_img = raw_median_intensity_from_img - background_median_intensity
 
     elif choice == 'global':
-      kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(100,100))
+      kernel=cv2.getStructuringElement(cv2.MORPH_RECT,(100,100))
       opening = cv2.morphologyEx(image, cv2.MORPH_OPEN, kernel)
       sub_image = cv2.subtract(image,opening)
       
@@ -334,7 +334,7 @@ class Image_Stacks:
             img = self.Image_stack[n].copy()
             intensity_img = self.Intensity_stack[n].copy()
             cl1, gaussian_blur,medfilter = enhance_blur_medfilter(img, self._enhance,self._blur,self._kernal,self.median_filter,self.size)
-            _, _,medfilter_intensity = enhance_blur_medfilter(intensity_img, self._enhance,self._blur,self._kernal,self.median_filter,self.size)
+            _, _,medfilter_intensity = enhance_blur_medfilter(intensity_img, False,False,self._kernal,self.median_filter,self.size)
 
             self.Image_stack_blur[n] = cl1
             self.Image_stack_enhance[n] = gaussian_blur

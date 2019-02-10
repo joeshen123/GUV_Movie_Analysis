@@ -63,13 +63,13 @@ a = find_perfect_plane (img_stack)
 im = img_stack[0,:,:]
 im2 = img_stack[60,:,:]
 
-_,_,img = enhance_blur_medfilter(im2,  median_filter=True)
+_,_,img = enhance_blur_medfilter(im2, median_filter=True)
 
 plt.imshow(img)
 plt.show()
 
 
-kernel=cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(100,100))
+kernel=cv2.getStructuringElement(cv2.MORPH_RECT,(100,100))
 opening = cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)
 
 #_,opening,_ = enhance_blur_medfilter(opening,  median_filter=False)
