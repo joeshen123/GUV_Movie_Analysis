@@ -6,6 +6,11 @@ import matplotlib.pyplot as plt
 from functools import reduce
 import pandas as pd
 import glob,os
+import warnings
+
+#Ignore Warnings
+warnings.simplefilter("ignore",UserWarning)
+warnings.simplefilter("ignore",RuntimeWarning)
 
 # Make a function to combine all df together into one df. Input is the directory of all dfs
 def curve_df_combine(directory):
@@ -23,10 +28,10 @@ def curve_df_combine(directory):
       df_list_one = pickle.load(pickle_in)
       df_list += df_list_one
 
-   print(len(df_list))
+   df_len = len(df_list)
    df_final = pd.concat(df_list)
    
-   return df_final
+   return df_final, df_len
 
 root = tk.Tk()
 root.withdraw()
@@ -36,21 +41,21 @@ root.directory = filedialog.askdirectory()
 
 Name1 = root.directory
 label_1 = Name1.split("/")[-1].split(" ")[0]
-df_final_one = curve_df_combine(Name1)
+df_final_one,df_final_one_len = curve_df_combine(Name1)
 
 root.directory = filedialog.askdirectory()
 Name2 = root.directory
 label_2 = Name2.split("/")[-1].split(" ")[0]
-df_final_two = curve_df_combine(Name2)
+df_final_two,df_final_two_len = curve_df_combine(Name2)
 
 
 
 
 #print(df)
 sns.set_style('ticks')
-sns.set(font_scale=1.3)
-ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_one,label=label_1)
-ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_two,label=label_2)
+sns.set(font_scale=1.2)
+ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_one,label='%s (n = %d)' %(label_1, df_final_one_len))
+ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_two,label='%s (n = %d)' %(label_2, df_final_two_len))
 #ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_three)
 ax.set_title("%s and %s Binding Profile" %(label_1, label_2))
 plt.show()

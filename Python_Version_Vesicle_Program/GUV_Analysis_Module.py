@@ -379,10 +379,15 @@ class Image_Stacks:
 
         for n in list_len:
             list_len.set_description('Generating Rendering Images')
-            original_image = self.Image_stack_median[n]
-            intensity_based_image = self.Intensity_stack_med[n]
+            original_image = self.Image_stack_median[n].copy()
+            intensity_based_image = self.Intensity_stack_med[n].copy()
             center = (single_circles[n][0],single_circles[n][1])
             r = single_circles[n][2]
+
+            #add the circles to original GUV image
+            Plot_center = (int(center[0]),int(center[1]))
+            self.Image_stack_median[n] = cv2.circle(self.Image_stack_median[n], Plot_center, int(r), (0,0,0),-1)
+
             Rendering_Image = draw_circle_fit(center,r,original_image)
             Rendering_Intensity_Image = draw_circle_fit(center,r,intensity_based_image)
 
