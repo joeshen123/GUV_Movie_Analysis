@@ -43,6 +43,7 @@ Name1 = root.directory
 label_1 = Name1.split("/")[-1].split(" ")[0]
 df_final_one,df_final_one_len = curve_df_combine(Name1)
 
+
 root.directory = filedialog.askdirectory()
 Name2 = root.directory
 label_2 = Name2.split("/")[-1].split(" ")[0]
@@ -57,6 +58,6 @@ sns.set(font_scale=1.2)
 ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_one,label='%s (n = %d)' %(label_1, df_final_one_len))
 ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_two,label='%s (n = %d)' %(label_2, df_final_two_len))
 #ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_three)
-ax.set_title("%s and %s Binding Profile" %(label_1, label_2))
+#ax.set_title("%s and %s Binding Profile" %(label_1, label_2))
 plt.show()
 #plt.savefig('C2_versus_mutant_rupture.tif', dpi=400)

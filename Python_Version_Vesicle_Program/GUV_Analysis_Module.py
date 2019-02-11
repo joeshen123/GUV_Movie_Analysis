@@ -195,7 +195,7 @@ def enhance_blur_medfilter(img, enhance=True,blur=True,kernal=5,median_filter=Tr
     return (cl1, gaussian_blur,medfilter)
 
 
-def fit_circle_contour(image,pt,width=20,height=20):
+def fit_circle_contour(image,pt,r,width=20,height=20,):
     sample_points = circle_edge_detector(pt,width, image)
 
     #print(sample_points)
@@ -203,12 +203,12 @@ def fit_circle_contour(image,pt,width=20,height=20):
     
     if len(sample_points) <= 25:
         sample_points = draw_sample_points(image,pt,width)
-       
+ 
     model_robust, inliers = ransac(sample_points, CircleModel,min_samples=3,residual_threshold=2,max_trials=1000)
     y,x,r = model_robust.params
     center = (x,y)
     
-
+        
     return (center,r)
 
 def obtain_ring_pixel(center,radius,dif,image,choice='global'):
@@ -289,6 +289,7 @@ class Image_Stacks:
          self.Image_stack_enhance = np.zeros(vesicle_image.shape)
          self.Image_stack_blur = np.zeros(vesicle_image.shape)
          self.Image_stack_median = np.zeros(vesicle_image.shape)
+         self.Image_stack_median_circle_patch = np.zeros(vesicle_image.shape)
          self.Rendering_Image_Stack = []
          self.Rendering_Intensity_Image = []
          self.Crop_Original_Stack = []
@@ -304,9 +305,7 @@ class Image_Stacks:
          self.width = None
          self.height = None
          self.line_ani = None
-         self.background_center = None
-         self.background_radius = None
-
+        
      def set_parameter (self,enhance=True, blur = True, kernal = 5,median_filter = True,size=3):
         self._enhance = enhance
         self._blur = blur
@@ -353,8 +352,15 @@ class Image_Stacks:
         iter_len = tqdm(range(num_len))
         for n in iter_len:
             iter_len.set_description('Fitting circle to original image')
-
-            center,r = fit_circle_contour(self.Image_stack_median[n], self.point, self.width,self.height)
+            
+            try:
+                center,r = fit_circle_contour(self.Image_stack_median[n], self.point, self.width,self.height)
+            
+            except:
+                pass
+                center = self.point
+                r = r_list[-1]
+                
             self.point = center
             center_list.append(center)
             r_list.append(r)
@@ -386,7 +392,8 @@ class Image_Stacks:
 
             #add the circles to original GUV image
             Plot_center = (int(center[0]),int(center[1]))
-            self.Image_stack_median[n] = cv2.circle(self.Image_stack_median[n], Plot_center, int(r), (0,0,0),-1)
+            self.Image_stack_median_circle_patch[n] = self.Image_stack_median[n].copy()
+            self.Image_stack_median_circle_patch[n] = cv2.circle(self.Image_stack_median_circle_patch[n], Plot_center, int(r), (0,0,0),-1)
 
             Rendering_Image = draw_circle_fit(center,r,original_image)
             Rendering_Intensity_Image = draw_circle_fit(center,r,intensity_based_image)

@@ -77,7 +77,7 @@ def Z_Stack_Images_Extractor(address, fields_of_view,hough_choice = 'All'):
      MI = np.max(z_stack_images, axis = 0)
      MI_Slice.append(MI)
      
-     if hough_choice == 'All' or (hough_choice == 'once' and n==0):
+     if hough_choice == 'All' or (hough_choice == 'once' and n<=3):
        best_n = find_perfect_plane(z_stack_images)
 
      Intensity_best_Slice.append(z_stack_Intensity_images[best_n,:,:])
