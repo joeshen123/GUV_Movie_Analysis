@@ -15,7 +15,7 @@ root.withdraw()
 
 GUV_Post_Analysis_df_list = []
 
-my_filetypes = [('all files', '.*'),('Image files', '.tif')]
+my_filetypes = [('all files', '.*'),('Image files', '.tif'),('Attribute files', '.pkl')]
 
 Original_Image_path = filedialog.askopenfilename(title='Please Select a File', filetypes = my_filetypes)
 
@@ -27,6 +27,11 @@ Intensity_Image_path = filedialog.askopenfilename(title='Please Select a File', 
 image = io.imread(Original_Image_path)
 intensity_image = io.imread(Intensity_Image_path)
 
+Attribute_path = filedialog.askopenfilename(title='Please Select a File', filetypes = my_filetypes)
+
+with open(Attribute_path,'rb') as Attribute:
+   Attribute_dict = pickle.load(Attribute)
+
 button = True
 
 n = 1
@@ -34,8 +39,8 @@ n = 1
 while button == True:
     
    # Running Image Analysis Pipelines
-   Analysis_Stack = Image_Stacks(image,intensity_image)
-
+   Analysis_Stack = Image_Stacks(image,intensity_image,Attribute_dict)
+   
     #If this is the first in the loop, apply filter to the image. If not reuse previously preprocessed images
    if n == 1:
      Analysis_Stack.set_parameter()

@@ -11,6 +11,7 @@ from skimage import io
 import cv2
 from skimage import img_as_ubyte
 import warnings
+import pickle
 
 #Ignore warnings issued by skimage through conversion to uint8
 warnings.simplefilter("ignore",UserWarning)
@@ -56,6 +57,14 @@ def find_perfect_plane(img_stack):
 
 def Z_Stack_Images_Extractor(address, fields_of_view,hough_choice = 'All'):
    Image_Sequence = ND2Reader(address)
+
+   time_duration = float(Image_Sequence.metadata['experiment']['loops'][0]['duration']) / 60000
+   steps = int(Image_Sequence.metadata['num_frames'])
+
+   time_sequence = np.linspace(0, time_duration,num = steps )
+   
+   pixel_micron = Image_Sequence.metadata['pixel_microns']
+   
    time_series = Image_Sequence.sizes['t']
    z_stack = Image_Sequence.sizes['z']
    
@@ -63,7 +72,7 @@ def Z_Stack_Images_Extractor(address, fields_of_view,hough_choice = 'All'):
    Intensity_best_Slice = []
    MI_Slice = []
    for time in tqdm(range(time_series)):
-     z_stack_images = []
+     z_stack_images = [] 
      z_stack_Intensity_images = []
      for z_slice in range(z_stack):
         slice = Image_Sequence.get_frame_2D(c=1, t=time, z=z_slice, v=fields_of_view)
@@ -83,22 +92,30 @@ def Z_Stack_Images_Extractor(address, fields_of_view,hough_choice = 'All'):
      Intensity_best_Slice.append(z_stack_Intensity_images[best_n,:,:])
      n+=1
 
+
    MI_Slice = np.array(MI_Slice)
    Intensity_best_Slice = np.array(Intensity_best_Slice)
 
-   return (MI_Slice, Intensity_best_Slice)
+   return (time_sequence,pixel_micron,MI_Slice, Intensity_best_Slice)
 
 FOV_num = simpledialog.askinteger("Input", "Which fields of view number you want to put ?",
                                 parent=root, minvalue = 0, maxvalue = 100)
 
 
-MI_Images, best_Image_Intensity = Z_Stack_Images_Extractor(Image_Stack_Path,fields_of_view=FOV_num, hough_choice='once')
+time_seq, pixel_micron,MI_Images, best_Image_Intensity = Z_Stack_Images_Extractor(Image_Stack_Path,fields_of_view=FOV_num, hough_choice='once')
 
 
 #Save Max Intensity Images to tiff hyperstack for furthur analysis
 
 File_save_names = filedialog.asksaveasfilename(parent=root,title="Please select a file name for saving:",filetypes=[('Image Files', '.tif')])
 File_save_names_Intensity = File_save_names.replace(".tif", "_Intensity.tif")
+Attribute_file_name = File_save_names.replace(".tif","_Attribute.pkl")
+
+Attribute_data =  {'Time_Sequence': time_seq, 'Micron_Pixel': pixel_micron}
+
+with open(Attribute_file_name,'wb') as Attribute_file:
+   pickle.dump(Attribute_data, Attribute_file)
+
 
 tifffile.imsave(File_save_names,MI_Images.astype('uint16'),bigtiff=True,metadata={'axes': 'TYX'})
 tifffile.imsave(File_save_names_Intensity,best_Image_Intensity.astype('uint16'),bigtiff=True,metadata={'axes': 'TYX'})

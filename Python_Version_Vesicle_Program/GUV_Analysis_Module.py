@@ -82,25 +82,25 @@ def Pandas_list_plotting(pandas_list, keyword):
     if keyword == 'Intensity':
       ax.set_title('Vesicles Protein Bindings Changes',fontsize=18)
 
-      ax.set_xlabel('Time Points', fontsize = 16, fontweight = 'bold')
+      ax.set_xlabel('Time Points (min)', fontsize = 16, fontweight = 'bold')
       ax.set_ylabel('Protein Fluorescence Intensity', fontsize = 16,fontweight = 'bold')
 
       for n in range(list_len):
          df = pandas_list[n]
          Intensity_data = df['GFP intensity'].tolist()
-         Time_point = np.arange(len(Intensity_data))
+         Time_point = df['Time Point'].tolist()
          ax = plt.plot(Time_point, Intensity_data, color = color[n], label = str(n))
 
     if keyword == 'Radius':
-      ax.set_title('Vesicles Radius Changes',fontsize=18)
+      ax.set_title('Vesicles Radius Changes (um)',fontsize=18)
 
-      ax.set_xlabel('Time Points', fontsize = 16, fontweight = 'bold')
-      ax.set_ylabel('Vesicles Radius', fontsize = 16,fontweight = 'bold')
+      ax.set_xlabel('Time Points (min)', fontsize = 16, fontweight = 'bold')
+      ax.set_ylabel('Vesicles Radius (um)', fontsize = 16,fontweight = 'bold')
 
       for n in range(list_len):
          df = pandas_list[n]
-         radius_data = df['radius'].tolist()
-         Time_point = np.arange(len(radius_data))
+         radius_data = df['radius_micron'].tolist()
+         Time_point = df['Time Point'].tolist()
          ax = plt.plot(Time_point, radius_data, color = color[n], label = str(n))
 
 
@@ -138,19 +138,19 @@ def creating_mask(Image,center,width,height,factor=2):
 
     return mask_image
 
-def generate_df_from_list(center_list,r_list,intensity_list):
+def generate_df_from_list(time_point_list, pixel_attribute, center_list,r_list,intensity_list):
 
-    Time_point_list = np.arange(len(center_list))
+    time_point_list = np.array(time_point_list) 
 
     center_list = np.array(center_list)
     center_x = center_list [:,0]
     center_y = center_list[:,1]
 
-    r_list = np.array(r_list)
-
+    r_list = np.array(r_list) 
+    r_list_micron = r_list * pixel_attribute
     intensity_list = np.array(intensity_list)
 
-    stat_dict = {'Time Point': Time_point_list,'center_x': center_x, 'center_y': center_y, 'radius': r_list, 'GFP intensity': intensity_list}
+    stat_dict = {'Time Point': time_point_list,'center_x': center_x, 'center_y': center_y, 'radius': r_list, 'radius_micron':r_list_micron, 'GFP intensity': intensity_list}
 
     stat_df = pd.DataFrame(stat_dict)
 
@@ -282,18 +282,18 @@ def display_image_sequence(image_stack,string):
 # Define a class to store and process the time series Images
 class Image_Stacks:
 
-     def __init__ (self,vesicle_image,GFP_image):
+     def __init__ (self,vesicle_image,GFP_image,Attribute_dict):
          self.Image_stack = vesicle_image.copy()
          self.Intensity_stack = GFP_image.copy()
          self.Intensity_stack_med = np.zeros(GFP_image.shape)
-         self.Image_stack_enhance = np.zeros(vesicle_image.shape)
-         self.Image_stack_blur = np.zeros(vesicle_image.shape)
          self.Image_stack_median = np.zeros(vesicle_image.shape)
          self.Image_stack_median_circle_patch = np.zeros(vesicle_image.shape)
          self.Rendering_Image_Stack = []
          self.Rendering_Intensity_Image = []
          self.Crop_Original_Stack = []
          self.Crop_Intensity_Stack = []
+         self.time_sequence = Attribute_dict['Time_Sequence']
+         self.Micron_Pixel = Attribute_dict['Micron_Pixel']
          self._enhance = None
          self._blur = None
          self._kernal = None
@@ -305,6 +305,7 @@ class Image_Stacks:
          self.width = None
          self.height = None
          self.line_ani = None
+
         
      def set_parameter (self,enhance=True, blur = True, kernal = 5,median_filter = True,size=3):
         self._enhance = enhance
@@ -332,11 +333,9 @@ class Image_Stacks:
          for n in range(num_len):
             img = self.Image_stack[n].copy()
             intensity_img = self.Intensity_stack[n].copy()
-            cl1, gaussian_blur,medfilter = enhance_blur_medfilter(img, self._enhance,self._blur,self._kernal,self.median_filter,self.size)
-            _, _,medfilter_intensity = enhance_blur_medfilter(intensity_img, False,False,self._kernal,self.median_filter,self.size)
+            _, _,medfilter = enhance_blur_medfilter(img, self._enhance,self._blur,self._kernal,self.median_filter,self.size)
+            _, _,medfilter_intensity = enhance_blur_medfilter(intensity_img, False,self._blur,self._kernal,self.median_filter,self.size)
 
-            self.Image_stack_blur[n] = cl1
-            self.Image_stack_enhance[n] = gaussian_blur
             self.Image_stack_median[n] = medfilter
             self.Intensity_stack_med[n] = medfilter_intensity
     
@@ -371,7 +370,7 @@ class Image_Stacks:
             Intensity = obtain_ring_pixel(center_list[n],r_list[n],1.5,self.Intensity_stack_med[n], choice='global')
             GFP_list.append(Intensity)
 
-        self.stats_df = generate_df_from_list(center_list,r_list,GFP_list)
+        self.stats_df = generate_df_from_list(self.time_sequence, self.Micron_Pixel, center_list,r_list,GFP_list)
 
 
 
@@ -440,7 +439,7 @@ class Image_Stacks:
        ax2.set_title('Peripheral Protein Bindings Changes',fontsize=18)
 
 
-       ax3.set_xlabel('Time Points', fontsize = 16, fontweight = 'bold')
+       ax3.set_xlabel('Time Points (min)', fontsize = 16, fontweight = 'bold')
        ax3.set_ylabel('Protein Fluorescence Intensity', fontsize = 16,fontweight = 'bold')
        ax3.set_xlim(0,(len(Intensity_data)+1))
        ax3.set_ylim(-800,(np.max(Intensity_data)+300))
@@ -449,8 +448,8 @@ class Image_Stacks:
        ax4= ax3.twinx()
        #l_two, =ax4.plot([], [], 'b-')
 
-       ax4.set_xlabel('Time Points', fontsize = 16, fontweight = 'bold')
-       ax4.set_ylabel('Radius Changes',fontsize = 16, fontweight = 'bold')
+       ax4.set_xlabel('Time Points (min)', fontsize = 16, fontweight = 'bold')
+       ax4.set_ylabel('Radius Changes (um)',fontsize = 16, fontweight = 'bold')
        ax4.set_xlim(0,(len(Radius_data)+1))
        ax4.set_ylim((np.min(Radius_data)-1),(np.max(Radius_data)+1))
 
