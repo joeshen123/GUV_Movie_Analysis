@@ -195,7 +195,7 @@ def enhance_blur_medfilter(img, enhance=True,blur=True,kernal=5,median_filter=Tr
     return (cl1, gaussian_blur,medfilter)
 
 
-def fit_circle_contour(image,pt,r,width=20,height=20,):
+def fit_circle_contour(image,pt,width=20,height=20):
     sample_points = circle_edge_detector(pt,width, image)
 
     #print(sample_points)
@@ -533,13 +533,13 @@ line_selection.show_image(im)
 line_selection.draw_line()
 plt.show()
 
-list = circle_edge_detector(line_selection.center,line_selection.dist,im[70,:,:])
+list = circle_edge_detector(line_selection.center,line_selection.dist,im[11,:,:])
 
 y,x= zip(*list)
 
-center,r = fit_circle_contour(im[70,:,:],line_selection.center,line_selection.dist)
+center,r = fit_circle_contour(im[11,:,:],line_selection.center,line_selection.dist,line_selection.dist)
 fig,ax = plt.subplots()
-ax.imshow(im[70,:,:])
+ax.imshow(im[11,:,:])
 circle = Circle(center,radius=r,facecolor=None,fill=False,edgecolor='b',linewidth=2)
 ax.add_patch(circle)
 plt.scatter(x,y,c = 'r')

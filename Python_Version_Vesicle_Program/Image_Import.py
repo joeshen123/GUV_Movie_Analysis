@@ -88,6 +88,7 @@ def Z_Stack_Images_Extractor(address, fields_of_view,hough_choice = 'All'):
      
      if hough_choice == 'All' or (hough_choice == 'once' and n<=3):
        best_n = find_perfect_plane(z_stack_images)
+       print(best_n)
 
      Intensity_best_Slice.append(z_stack_Intensity_images[best_n,:,:])
      n+=1
@@ -101,8 +102,9 @@ def Z_Stack_Images_Extractor(address, fields_of_view,hough_choice = 'All'):
 FOV_num = simpledialog.askinteger("Input", "Which fields of view number you want to put ?",
                                 parent=root, minvalue = 0, maxvalue = 100)
 
+FOV_num = FOV_num - 1
 
-time_seq, pixel_micron,MI_Images, best_Image_Intensity = Z_Stack_Images_Extractor(Image_Stack_Path,fields_of_view=FOV_num, hough_choice='once')
+time_seq, pixel_micron,MI_Images, best_Image_Intensity = Z_Stack_Images_Extractor(Image_Stack_Path,fields_of_view=FOV_num, hough_choice='All')
 
 
 #Save Max Intensity Images to tiff hyperstack for furthur analysis

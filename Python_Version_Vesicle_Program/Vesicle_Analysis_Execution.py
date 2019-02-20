@@ -17,17 +17,22 @@ GUV_Post_Analysis_df_list = []
 
 my_filetypes = [('all files', '.*'),('Image files', '.tif'),('Attribute files', '.pkl')]
 
-Original_Image_path = filedialog.askopenfilename(title='Please Select a File', filetypes = my_filetypes)
+filez = filedialog.askopenfilenames(parent = root, title='Please Select a File', filetypes = my_filetypes)
 
-root = tk.Tk()
-root.withdraw()
+file_list= root.tk.splitlist(filez)
 
-Intensity_Image_path = filedialog.askopenfilename(title='Please Select a File', filetypes = my_filetypes)
+for file in file_list:
+  if 'Intensity' in file:
+    Intensity_Image_path = file
+  
+  elif 'Attribute' in file:
+    Attribute_path = file
+
+  else:
+    Original_Image_path = file
 
 image = io.imread(Original_Image_path)
 intensity_image = io.imread(Intensity_Image_path)
-
-Attribute_path = filedialog.askopenfilename(title='Please Select a File', filetypes = my_filetypes)
 
 with open(Attribute_path,'rb') as Attribute:
    Attribute_dict = pickle.load(Attribute)
