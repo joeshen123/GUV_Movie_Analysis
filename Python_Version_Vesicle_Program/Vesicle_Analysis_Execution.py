@@ -25,17 +25,13 @@ for file in file_list:
   if 'Intensity' in file:
     Intensity_Image_path = file
   
-  elif 'Attribute' in file:
-    Attribute_path = file
-
+  
   else:
     Original_Image_path = file
-
+    #print(Original_Image_path)
 image = io.imread(Original_Image_path)
 intensity_image = io.imread(Intensity_Image_path)
 
-with open(Attribute_path,'rb') as Attribute:
-   Attribute_dict = pickle.load(Attribute)
 
 button = True
 
@@ -44,7 +40,7 @@ n = 1
 while button == True:
     
    # Running Image Analysis Pipelines
-   Analysis_Stack = Image_Stacks(image,intensity_image,Attribute_dict)
+   Analysis_Stack = Image_Stacks(image,intensity_image)
    
     #If this is the first in the loop, apply filter to the image. If not reuse previously preprocessed images
    if n == 1:
@@ -64,23 +60,23 @@ while button == True:
     #display_image_sequence(Analysis_Stack.Rendering_Intensity_Image,'Display Intensity Images')
 
    #Ask the User whether to play the time lapse plotting animation
-
-    #answer = messagebox.askyesnocancel("Question","Do you want to play the dynamic plotting animations?")
-
-
-    #if answer ==True:
-      #Analysis_Stack.live_plotting_intensity()
+   '''
+   answer = messagebox.askyesnocancel("Question","Do you want to play the dynamic plotting animations?")
 
 
-      #second_answer = messagebox.askyesnocancel("Question","Do you want to save plot as movie?")
+   if answer ==True:
+      Analysis_Stack.live_plotting_intensity()
 
-      #if second_answer==True:
-        #movie_save_name = filedialog.asksaveasfilename(parent=root,title="Please select a movie name for saving:",filetypes=[('Movie files', '.mp4')])
-        #Analysis_Stack.line_ani.save(movie_save_name,fps=10)
 
-     #if second_answer == False:
-         #Analysis_Stack.line_ani = None
+      second_answer = messagebox.askyesnocancel("Question","Do you want to save plot as movie?")
 
+      if second_answer==True:
+        movie_save_name = filedialog.asksaveasfilename(parent=root,title="Please select a movie name for saving:",filetypes=[('Movie files', '.mp4')])
+        Analysis_Stack.line_ani.save(movie_save_name,fps=10)
+
+      if second_answer == False:
+         Analysis_Stack.line_ani = None
+   '''
     
    # Ask the user whether to save the dataframe
    save_df_answer = messagebox.askyesnocancel("Question","Do you want to save this analysis result?")

@@ -32,7 +32,7 @@ def find_perfect_plane(img_stack):
    stack_len = img_stack.shape[0]
    max_num = 0
    best_n = 0
-
+   circle_num_list = []
    for n in range(stack_len):
       img = img_as_ubyte(img_stack[n,:,:])
       img = cv2.normalize(img,None,alpha=0, beta=255,norm_type=cv2.NORM_MINMAX)
@@ -45,32 +45,28 @@ def find_perfect_plane(img_stack):
       if not (circles is None):
         circle = np.uint16(np.around(circles))
         circle_num = circle.shape[1]
-
-        if circle_num >= max_num:
-          max_num = circle_num
-          best_n = n
+        circle_num_list.append((n,circle_num))
+      
+      circle_num_list = sorted(circle_num_list, key = lambda element: element[1], reverse = True)
+      top_3 = circle_num_list[:5]
+      
+      slice_list = [x[0] for x in top_3]
     
-   return best_n
+   return slice_list
 
 # Define a function to convert time series of ND2 images to a numpy list of Max Intensity Projection
 # images.
 
-def Z_Stack_Images_Extractor(address, fields_of_view,hough_choice = 'All'):
+def Z_Stack_Images_Extractor(address, fields_of_view):
    Image_Sequence = ND2Reader(address)
-
-   time_duration = float(Image_Sequence.metadata['experiment']['loops'][0]['duration']) / 60000
-   steps = int(Image_Sequence.metadata['num_frames'])
-
-   time_sequence = np.linspace(0, time_duration,num = steps )
-   
-   pixel_micron = Image_Sequence.metadata['pixel_microns']
    
    time_series = Image_Sequence.sizes['t']
    z_stack = Image_Sequence.sizes['z']
    
-   n=0
    Intensity_best_Slice = []
    MI_Slice = []
+
+   n = 0
    for time in tqdm(range(time_series)):
      z_stack_images = [] 
      z_stack_Intensity_images = []
@@ -86,38 +82,33 @@ def Z_Stack_Images_Extractor(address, fields_of_view,hough_choice = 'All'):
      MI = np.max(z_stack_images, axis = 0)
      MI_Slice.append(MI)
      
-     if hough_choice == 'All' or (hough_choice == 'once' and n<=3):
-       best_n = find_perfect_plane(z_stack_images)
-       print(best_n)
+     if n <= 5:
+        best_list = find_perfect_plane(z_stack_images)
+     
+     best_intensity = np.array([z_stack_Intensity_images[n,:,:] for n in best_list])
 
-     Intensity_best_Slice.append(z_stack_Intensity_images[best_n,:,:])
+     Intensity_best_Slice.append(np.max(best_intensity, axis = 0))
+     
      n+=1
 
 
    MI_Slice = np.array(MI_Slice)
    Intensity_best_Slice = np.array(Intensity_best_Slice)
 
-   return (time_sequence,pixel_micron,MI_Slice, Intensity_best_Slice)
+   return (MI_Slice, Intensity_best_Slice)
 
 FOV_num = simpledialog.askinteger("Input", "Which fields of view number you want to put ?",
                                 parent=root, minvalue = 0, maxvalue = 100)
 
 FOV_num = FOV_num - 1
 
-time_seq, pixel_micron,MI_Images, best_Image_Intensity = Z_Stack_Images_Extractor(Image_Stack_Path,fields_of_view=FOV_num, hough_choice='All')
+MI_Images, best_Image_Intensity = Z_Stack_Images_Extractor(Image_Stack_Path,fields_of_view=FOV_num)
 
 
 #Save Max Intensity Images to tiff hyperstack for furthur analysis
 
 File_save_names = filedialog.asksaveasfilename(parent=root,title="Please select a file name for saving:",filetypes=[('Image Files', '.tif')])
 File_save_names_Intensity = File_save_names.replace(".tif", "_Intensity.tif")
-Attribute_file_name = File_save_names.replace(".tif","_Attribute.pkl")
-
-Attribute_data =  {'Time_Sequence': time_seq, 'Micron_Pixel': pixel_micron}
-
-with open(Attribute_file_name,'wb') as Attribute_file:
-   pickle.dump(Attribute_data, Attribute_file)
-
 
 tifffile.imsave(File_save_names,MI_Images.astype('uint16'),bigtiff=True,metadata={'axes': 'TYX'})
 tifffile.imsave(File_save_names_Intensity,best_Image_Intensity.astype('uint16'),bigtiff=True,metadata={'axes': 'TYX'})

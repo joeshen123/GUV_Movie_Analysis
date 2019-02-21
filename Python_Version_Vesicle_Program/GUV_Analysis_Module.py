@@ -138,10 +138,9 @@ def creating_mask(Image,center,width,height,factor=2):
 
     return mask_image
 
-def generate_df_from_list(time_point_list, pixel_attribute, center_list,r_list,intensity_list):
+def generate_df_from_list(pixel_attribute, center_list,r_list,intensity_list):
 
-    time_point_list = np.array(time_point_list) 
-
+    time_point_list = np.linspace(0, 60, num = len(center_list))
     center_list = np.array(center_list)
     center_x = center_list [:,0]
     center_y = center_list[:,1]
@@ -282,7 +281,7 @@ def display_image_sequence(image_stack,string):
 # Define a class to store and process the time series Images
 class Image_Stacks:
 
-     def __init__ (self,vesicle_image,GFP_image,Attribute_dict):
+     def __init__ (self,vesicle_image,GFP_image):
          self.Image_stack = vesicle_image.copy()
          self.Intensity_stack = GFP_image.copy()
          self.Intensity_stack_med = np.zeros(GFP_image.shape)
@@ -292,8 +291,7 @@ class Image_Stacks:
          self.Rendering_Intensity_Image = []
          self.Crop_Original_Stack = []
          self.Crop_Intensity_Stack = []
-         self.time_sequence = Attribute_dict['Time_Sequence']
-         self.Micron_Pixel = Attribute_dict['Micron_Pixel']
+         self.Micron_Pixel = 0.33
          self._enhance = None
          self._blur = None
          self._kernal = None
@@ -370,7 +368,7 @@ class Image_Stacks:
             Intensity = obtain_ring_pixel(center_list[n],r_list[n],1.5,self.Intensity_stack_med[n], choice='global')
             GFP_list.append(Intensity)
 
-        self.stats_df = generate_df_from_list(self.time_sequence, self.Micron_Pixel, center_list,r_list,GFP_list)
+        self.stats_df = generate_df_from_list(self.Micron_Pixel, center_list,r_list,GFP_list)
 
 
 
@@ -442,7 +440,7 @@ class Image_Stacks:
        ax3.set_xlabel('Time Points (min)', fontsize = 16, fontweight = 'bold')
        ax3.set_ylabel('Protein Fluorescence Intensity', fontsize = 16,fontweight = 'bold')
        ax3.set_xlim(0,(len(Intensity_data)+1))
-       ax3.set_ylim(-800,(np.max(Intensity_data)+300))
+       ax3.set_ylim(0,(np.max(Intensity_data)+300))
        #l_one, =ax3.plot([], [], 'r-')
 
        ax4= ax3.twinx()
