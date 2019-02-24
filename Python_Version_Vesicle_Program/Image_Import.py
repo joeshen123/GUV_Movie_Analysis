@@ -1,7 +1,7 @@
 from nd2reader.reader import ND2Reader
 import numpy as np
 import time
-from tqdm import tqdm
+from tkinter import ttk
 from tkinter import simpledialog
 from tkinter import filedialog
 import tkinter as tk
@@ -12,7 +12,7 @@ import cv2
 from skimage import img_as_ubyte
 import warnings
 import pickle
-from tqdm import tqdm_gui
+
 #Ignore warnings issued by skimage through conversion to uint8
 warnings.simplefilter("ignore",UserWarning)
 warnings.simplefilter("ignore",RuntimeWarning)
@@ -75,9 +75,19 @@ def Z_Stack_Images_Extractor(address, fields_of_view):
 
    n = 0
 
-   time_loop = tqdm_gui(range(time_series))
-   for time in time_loop:
-     time_loop.set_description('Generating best plane image stacks')
+   # create progress bar
+   windows = tk.Tk()
+   windows.title("Extracting Best Fitting Plane")
+   progress = ttk.Progressbar(windows, orient = 'horizontal', length = 1000, mode = 'determinate')
+   progress.grid()
+   progress.pack(side=tk.TOP)
+   progress['maximum'] = time_series - 1
+
+   progress['value'] = n
+   
+   progress.update_idletasks()
+
+   for time in range(time_series):
      z_stack_images = [] 
      z_stack_Intensity_images = []
      for z_slice in range(z_stack):
@@ -101,6 +111,8 @@ def Z_Stack_Images_Extractor(address, fields_of_view):
      Intensity_best_Slice.append(np.max(best_intensity, axis = 0))
      
      n+=1
+     progress['value'] = n
+     progress.update()
 
 
    MI_Slice = np.array(MI_Slice)
