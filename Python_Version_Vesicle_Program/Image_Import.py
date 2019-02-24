@@ -12,7 +12,7 @@ import cv2
 from skimage import img_as_ubyte
 import warnings
 import pickle
-
+from tqdm import tqdm_gui
 #Ignore warnings issued by skimage through conversion to uint8
 warnings.simplefilter("ignore",UserWarning)
 warnings.simplefilter("ignore",RuntimeWarning)
@@ -41,16 +41,23 @@ def find_perfect_plane(img_stack):
    
       circles = cv2.HoughCircles(img,cv2.HOUGH_GRADIENT,0.1,20,
                                  param1=200,param2=30,minRadius=0,maxRadius=80)
-    
+   
       if not (circles is None):
         circle = np.uint16(np.around(circles))
         circle_num = circle.shape[1]
         circle_num_list.append((n,circle_num))
       
-      circle_num_list = sorted(circle_num_list, key = lambda element: element[1], reverse = True)
-      top_3 = circle_num_list[:5]
+      else:
+         circle_num_list.append((n,0))
+   
+
+   circle_num_list = sorted(circle_num_list, key = lambda element: element[1], reverse = True)
+   
+   top_4 = circle_num_list[:4]
+
       
-      slice_list = [x[0] for x in top_3]
+   slice_list = [x[0] for x in top_4]
+      
     
    return slice_list
 
@@ -67,7 +74,10 @@ def Z_Stack_Images_Extractor(address, fields_of_view):
    MI_Slice = []
 
    n = 0
-   for time in tqdm(range(time_series)):
+
+   time_loop = tqdm_gui(range(time_series))
+   for time in time_loop:
+     time_loop.set_description('Generating best plane image stacks')
      z_stack_images = [] 
      z_stack_Intensity_images = []
      for z_slice in range(z_stack):
@@ -84,6 +94,7 @@ def Z_Stack_Images_Extractor(address, fields_of_view):
      
      if n <= 5:
         best_list = find_perfect_plane(z_stack_images)
+
      
      best_intensity = np.array([z_stack_Intensity_images[n,:,:] for n in best_list])
 

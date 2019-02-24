@@ -15,11 +15,14 @@ from skimage.filters import sobel
 from skimage import viewer
 from skimage.viewer.plugins import lineprofile, Measure, CannyPlugin
 from skimage import exposure
-from GUV_Analysis_Module import *
+from tkinter import simpledialog
+
+
+#from GUV_Analysis_Module import *
 
 #Ignore warnings issued by skimage through conversion to uint8
 #warnings.simplefilter("ignore",UserWarning)
-    
+
 # Use tkinter to interactively select files to import
 root = tk.Tk()
 root.withdraw()
@@ -32,47 +35,57 @@ Original_Image_path = filedialog.askopenfilename(title='Please Select a File', f
 
 img_stack = io.imread(Original_Image_path)
 
-'''
+
+
 def find_perfect_plane(img_stack):
    stack_len = img_stack.shape[0]
    max_num = 0
    best_n = 0
-
+   circle_num_list = []
    for n in range(stack_len):
       img = img_as_ubyte(img_stack[n,:,:])
       img = cv2.normalize(img,None,alpha=0, beta=255,norm_type=cv2.NORM_MINMAX)
       img = cv2.equalizeHist(img)
       img = cv2.GaussianBlur(img,(11,11),0,0)
-      
-      
-      circles = cv2.HoughCircles(img,cv2.HOUGH_GRADIENT,0.1,30,param1=200,param2=30,minRadius=0,maxRadius=60)
-      
+   
+      circles = cv2.HoughCircles(img,cv2.HOUGH_GRADIENT,0.1,20,
+                                 param1=200,param2=30,minRadius=0,maxRadius=80)
+   
       if not (circles is None):
-       circle = np.uint16(np.around(circles))
-       circle_num = circle.shape[1]
+        circle = np.uint16(np.around(circles))
+        circle_num = circle.shape[1]
+        circle_num_list.append((n,circle_num))
+      
+      else:
+         circle_num_list.append((n,0))
+   
 
-       if circle_num >= max_num:
-         max_num = circle_num
-         best_n = n
+   circle_num_list = sorted(circle_num_list, key = lambda element: element[1], reverse = True)
+   
+   top_4 = circle_num_list[:4]
+
+      
+   slice_list = [x[0] for x in top_4]
+      
     
-   return best_n
+   return slice_list
 
 a = find_perfect_plane (img_stack)
 
 '''
-'''
-im = img_stack[0,:,:]
+#im = img_stack[0,:,:]
 #im2 = img_stack[60,:,:]
 
-_,_,img = enhance_blur_medfilter(im, median_filter=True)
+#_,_,img = enhance_blur_medfilter(im, median_filter=True)
 
 plt.imshow(img)
 plt.show()
 
 
-#kernel=cv2.getStructuringElement(cv2.MORPH_RECT,(100,100))
-#opening = cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)
+kernel=cv2.getStructuringElement(cv2.MORPH_RECT,(100,100))
+opening = cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)
 
+im_sub = cv2.subtract(img,opening)
 #_,opening,_ = enhance_blur_medfilter(opening,  median_filter=False)
 
 #print(img)
@@ -82,8 +95,11 @@ plt.show()
 #print(np.median(im_sub))
 #np.set_printoptions(threshold=np.inf)
 #print(im_sub)
-#plt.imshow(im_sub)
-#plt.show()
+plt.imshow(opening)
+plt.show()
+
+plt.imshow(im_sub)
+plt.show()
 
 new_viewer = viewer.ImageViewer(img) 
 new_viewer += lineprofile.LineProfile() 
@@ -98,17 +114,17 @@ new_viewer += lineprofile.LineProfile()
 #new_viewer += CannyPlugin()
 new_viewer.show() 
 '''
-
+'''
 img = img_as_ubyte(img_stack[19,:,:])
 #img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 img = cv2.normalize(img,None,alpha=0, beta=255,norm_type=cv2.NORM_MINMAX)
 img = cv2.equalizeHist(img)
-img = cv2.GaussianBlur(img,(11,11),0,0)
+img = cv2.GaussianBlur(img,(7,7),0,0)
 plt.imshow(img)
 plt.show()
 
-circles = cv2.HoughCircles(img,cv2.HOUGH_GRADIENT,0.1,30,
-                                 param1=200,param2=30,minRadius=0,maxRadius=60)
+circles = cv2.HoughCircles(img,cv2.HOUGH_GRADIENT,0.1,20,
+                                 param1=200,param2=30,minRadius=0,maxRadius=80)
       
 circles = np.uint16(np.around(circles))
 for i in circles[0,:]:
@@ -120,9 +136,20 @@ for i in circles[0,:]:
 cv2.imshow('detected circles',img)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
-
+'''
 '''
 _,_,img = enhance_blur_medfilter(img_stack[a,:,:],median_filter=False)
 plt.imshow(img)
 plt.show()
+
+
+
+root = tk.Tk()
+root.withdraw()
+delete_answer = simpledialog.askstring("Input", "Which number you want to delete ?",
+                                parent=root)
+
+int_list = [int(x) for x in delete_answer.split()]
+  
+print(int_list)
 '''
