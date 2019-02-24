@@ -68,11 +68,6 @@ while del_answer == True:
   del_answer = messagebox.askyesnocancel("Question","Do you want to delete more measurements?")
       
 
-  
-   
-
-   
-
 list_save_name = filedialog.asksaveasfilename(parent=root,title="Please select a name for saving datasheet:",filetypes=[('Data files', '.pkl')])
 
 if list_save_name != '':

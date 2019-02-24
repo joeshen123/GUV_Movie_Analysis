@@ -18,10 +18,12 @@ from matplotlib import gridspec
 from matplotlib.pyplot import cm
 from skimage.filters import threshold_otsu, threshold_adaptive
 import tkinter as tk
+from tkinter import ttk
 from tkinter import filedialog
 from skimage import measure
 import seaborn as sns
-from tqdm import tqdm_gui
+from tqdm import tqdm
+from colorama import Fore
 
 # define a function to find the border of a circle (assume the edge is the brightest)
 def circle_edge_detector(center, distance, image):
@@ -315,8 +317,11 @@ class Image_Stacks:
 
      def stack_enhance_blur(self):
          num_len = self.Image_stack.shape[0]
+         
+         pb = tqdm(range(num_len), bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.BLUE, Fore.RESET))
 
-         for n in range(num_len):
+         for n in pb:
+            pb.set_description ('Preposessing Image Stack')
             img = self.Image_stack[n].copy()
             intensity_img = self.Intensity_stack[n].copy()
             _, _,medfilter = enhance_blur_medfilter(img, self._enhance,self._blur,self._kernal,self.median_filter,self.size)
@@ -324,7 +329,7 @@ class Image_Stacks:
 
             self.Image_stack_median[n] = medfilter
             self.Intensity_stack_med[n] = medfilter_intensity
-    
+            
 
      def tracking_single_circle(self,num):
         num_len = self.Image_stack_median.shape[0]
@@ -355,18 +360,23 @@ class Image_Stacks:
         stats_df = generate_df_from_list(self.Micron_Pixel, center_list,r_list,GFP_list)
 
         return stats_df
-    
+     
+     # Design functions to track multiple circles based on single circle tracking function
      def tracking_multiple_circles(self):
-        
         num = len(self.point_list)
-
-        for n in tqdm_gui(range(num)):
+        
+        pb = tqdm(range(num), bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.RED, Fore.RESET))
+        for n in pb:
+           pb.set_description("Fitting Circles on GUV and Measure Protein Fluorescence")
            df = self.tracking_single_circle(n)
            self.stats_df_list.append(df)
-    
 
 
 
+        
+
+
+    # Generating Stacks to display as animation later
      def displaying_circle_movies(self):
         total_circle_list= []
 
@@ -375,9 +385,11 @@ class Image_Stacks:
           total_circle_list.append(single_circles)
 
         num_len = self.Image_stack_median.shape[0]
-
         
-        for n in range(num_len):
+        pb = tqdm(range(num_len), bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.GREEN, Fore.RESET))
+
+        for n in pb:
+          pb.set_description("Generating Image Stack Movies")
           self.render_image_intensity_temp =  self.Intensity_stack_med[n].copy()
           self.render_image_temp = self.Image_stack_median[n].copy()
 
@@ -397,7 +409,7 @@ class Image_Stacks:
 
             #self.Crop_Original_Stack.append(Crop_Original_Image)
             #self.Crop_Intensity_Stack.append(Crop_Intensity_Image)
-
+    
         self.Rendering_Image_Stack = np.array(self.Rendering_Image_Stack)
         self.Rendering_Intensity_Image = np.array(self.Rendering_Intensity_Image)
 
@@ -491,7 +503,6 @@ class line_drawing():
         xy = self.fig.ginput(-1,timeout=0)
         x = [p[0] for p in xy]
         self.x0 = x[::2]
-        print(x)
         self.x1 = x[1::2]
 
         y = [p[1] for p in xy]
@@ -499,7 +510,6 @@ class line_drawing():
         self.y1 = y[1::2]
 
         self.center = list(zip(self.x0, self.y0))
-        print(self.center)
         self.end = list(zip(self.x1,self.y1))
         
         for n in range(len(self.x0)):

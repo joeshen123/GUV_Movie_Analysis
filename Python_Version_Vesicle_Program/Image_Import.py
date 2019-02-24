@@ -79,7 +79,7 @@ def Z_Stack_Images_Extractor(address, fields_of_view):
    windows = tk.Tk()
    windows.title("Extracting Best Fitting Plane")
    s = ttk.Style(windows)
-
+   
    s.layout("LabeledProgressbar",
          [('LabeledProgressbar.trough',
            {'children': [('LabeledProgressbar.pbar',
@@ -87,14 +87,13 @@ def Z_Stack_Images_Extractor(address, fields_of_view):
                          ("LabeledProgressbar.label",
                           {"sticky": ""})],
            'sticky': 'nswe'})])
-   
 
-   progress = ttk.Progressbar(windows, orient = 'horizontal', length = 1000, mode = 'determinate', style = "LabeledProgressbar",)
-   s.configure("LabeledProgressbar", text="0 / %d     ", foreground = red, background = reds)
+   progress = ttk.Progressbar(windows, orient = 'horizontal', length = 1000, mode = 'determinate',style = "LabeledProgressbar")
+   s.configure("LabeledProgressbar", text="0 / %d     ", troughcolor ='white', background='red')
 
    progress.grid()
    progress.pack(side=tk.TOP)
-   progress['maximum'] = time_series - 1
+   progress['maximum'] = time_series
 
    progress['value'] = n
    
@@ -126,9 +125,9 @@ def Z_Stack_Images_Extractor(address, fields_of_view):
      n+=1
      progress['value'] = n
 
-     s.configure("LabeledProgressbar", text='%d / %d   ' %(n, time_series-1))
+     s.configure("LabeledProgressbar", text='%d / %d   ' %(n, time_series))
      progress.update()
-   progress.destroy()
+
 
 
    MI_Slice = np.array(MI_Slice)
