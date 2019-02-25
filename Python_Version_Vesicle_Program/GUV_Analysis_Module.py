@@ -321,7 +321,7 @@ class Image_Stacks:
          pb = tqdm(range(num_len), bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.BLUE, Fore.RESET))
 
          for n in pb:
-            pb.set_description ('Preposessing Image Stack')
+            pb.set_description ('Preprosessing Image Stack')
             img = self.Image_stack[n].copy()
             intensity_img = self.Intensity_stack[n].copy()
             _, _,medfilter = enhance_blur_medfilter(img, self._enhance,self._blur,self._kernal,self.median_filter,self.size)
