@@ -24,6 +24,41 @@ from skimage import measure
 import seaborn as sns
 from tqdm import tqdm
 from colorama import Fore
+from matplotlib.colors import LinearSegmentedColormap
+from skimage import img_as_ubyte
+
+#Make a colormap like Imagej Green Channel
+cdict1 = {'red':  ((0.0, 0.0, 0.0),   # <- at 0.0, the red component is 0
+                   (0.5, 0.0, 0.0),   # <- at 0.5, the red component is 1
+                   (1.0, 0.0, 0.0)),  # <- at 1.0, the red component is 0
+
+         'green': ((0.0, 0.0, 0.0),   # <- etc.
+                   (0.5, 0.5, 0.5),
+                   (1.0, 1.0, 1.0)),
+
+         'blue':  ((0.0, 0.0, 0.0),
+                   (0.5, 0.0, 0.0),
+                   (1.0, 0.0, 0.0))
+         }
+
+Green = LinearSegmentedColormap('Green', cdict1)
+
+#Make a colormap like Imagej Red Channel
+cdict2 = {'red':  ((0.0, 0.0, 0.0),   # <- at 0.0, the red component is 0
+                   (0.5, 0.5, 0.5),   # <- at 0.5, the red component is 1
+                   (1.0, 1.0, 1.0)),  # <- at 1.0, the red component is 0
+
+         'green': ((0.0, 0.0, 0.0),   # <- etc.
+                   (0.5, 0.0, 0.0),
+                   (1.0, 0.0, 0.0)),
+
+         'blue':  ((0.0, 0.0, 0.0),
+                   (0.5, 0.0, 0.0),
+                   (1.0, 0.0, 0.0))
+         }
+
+Red = LinearSegmentedColormap('Red', cdict2)
+
 
 # define a function to find the border of a circle (assume the edge is the brightest)
 def circle_edge_detector(center, distance, image):
@@ -166,7 +201,7 @@ def draw_sample_points (image,Position,distance):
 
     edges = feature.canny(closing_im,sigma=0.5)
     edges = edges * mask
-
+    
     points = np.column_stack(np.nonzero(edges))
 
 
@@ -197,7 +232,6 @@ def enhance_blur_medfilter(img, enhance=True,blur=True,kernal=5,median_filter=Tr
 
 def fit_circle_contour(image,pt,width=20,height=20):
     sample_points = circle_edge_detector(pt,width, image)
-
     #print(sample_points)
     #print(len(sample_points))
     
@@ -245,11 +279,11 @@ def obtain_ring_pixel(center,radius,dif,image,choice='global'):
 def draw_circle_fit (center,r ,image):
     Plot_center = (int(np.ceil(center[0])),int(np.ceil(center[1])))
     
-    img = cv2.circle(image, Plot_center, int(np.ceil(r)), (0,0,0),2)
+    img = cv2.circle(image, Plot_center, int(np.ceil(r)), 0,2)
     
     return img
 
-def display_image_sequence(image_stack,string):
+def display_image_sequence(image_stack,cmap_name):
    stack_len = len(image_stack)
    #print(image_stack.shape)
    img = None
@@ -257,7 +291,7 @@ def display_image_sequence(image_stack,string):
    for i in range(stack_len):
      im = image_stack[i]
      if img is None:
-        img = pylab.figimage(im)
+        img = pylab.figimage(im, cmap = cmap_name)
      else:
         img.set_data(im)
      pylab.pause(.1)
@@ -346,8 +380,14 @@ class Image_Stacks:
             
             except:
                 pass
+                print('Exception Raised!')
                 center = self.point
-                r = r_list[-1]
+                if n != 0:
+                  r = r_list[-1]
+                else:
+                  print('None Exception')
+                  r = self.width[num]
+
             
             self.point = center
             center_list.append(center)
@@ -496,7 +536,7 @@ class line_drawing():
 
     def show_image(self,image):
         self.fig, self.ax = plt.subplots()
-        self.ax.imshow(image[0,:,:])
+        self.ax.imshow(image[0,:,:], cmap= Red)
 
     def draw_line(self):
 
@@ -513,7 +553,7 @@ class line_drawing():
         self.end = list(zip(self.x1,self.y1))
         
         for n in range(len(self.x0)):
-           line = plt.plot((self.x0[n],self.x1[n]),(self.y0[n],self.y1[n]),'r-')
+           line = plt.plot((self.x0[n],self.x1[n]),(self.y0[n],self.y1[n]),'w-')
            self.lines.append(line)
 
         self.ax.figure.canvas.draw()

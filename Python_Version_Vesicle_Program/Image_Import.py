@@ -47,16 +47,16 @@ def find_perfect_plane(img_stack):
         circle_num = circle.shape[1]
         circle_num_list.append((n,circle_num))
       
-      else:
-         circle_num_list.append((n,0))
+      #else:
+         #circle_num_list.append((n,0))
    
 
    circle_num_list = sorted(circle_num_list, key = lambda element: element[1], reverse = True)
    
-   top_4 = circle_num_list[:4]
+   top_2 = circle_num_list[:2]
 
       
-   slice_list = [x[0] for x in top_4]
+   slice_list = [x[0] for x in top_2]
       
     
    return slice_list
@@ -135,19 +135,32 @@ def Z_Stack_Images_Extractor(address, fields_of_view):
 
    return (MI_Slice, Intensity_best_Slice)
 
-FOV_num = simpledialog.askinteger("Input", "Which fields of view number you want to put ?",
-                                parent=root, minvalue = 0, maxvalue = 100)
 
-FOV_num = FOV_num - 1
+Image_Sequence = ND2Reader(Image_Stack_Path)
+FOV_list = Image_Sequence.metadata['fields_of_view']
 
-MI_Images, best_Image_Intensity = Z_Stack_Images_Extractor(Image_Stack_Path,fields_of_view=FOV_num)
+MI_Image_list = []
+best_Image_Intensity_list = []
+
+for fov in FOV_list:
+   MI_Images, best_Image_Intensity = Z_Stack_Images_Extractor(Image_Stack_Path,fields_of_view=fov)
+   MI_Image_list.append(MI_Images)
+   best_Image_Intensity_list.append(best_Image_Intensity)
+
 
 
 #Save Max Intensity Images to tiff hyperstack for furthur analysis
 
 File_save_names = filedialog.asksaveasfilename(parent=root,title="Please select a file name for saving:",filetypes=[('Image Files', '.tif')])
-File_save_names_Intensity = File_save_names.replace(".tif", "_Intensity.tif")
 
-tifffile.imsave(File_save_names,MI_Images.astype('uint16'),bigtiff=True,metadata={'axes': 'TYX'})
-tifffile.imsave(File_save_names_Intensity,best_Image_Intensity.astype('uint16'),bigtiff=True,metadata={'axes': 'TYX'})
+
+for n in range(len(FOV_list)):
+   GUV_Image_Name='{File_Name}_{num}.tif'.format(File_Name = File_save_names, num = n + 1)
+   Protein_Image_Name = '{File_Name}_{num}_Intensity.tif'.format(File_Name = File_save_names, num = n + 1)
+
+   MI_Images = MI_Image_list[n]
+   best_Image_Intensity = best_Image_Intensity_list[n]
+
+   tifffile.imsave(GUV_Image_Name,MI_Images.astype('uint16'),bigtiff=True,metadata={'axes': 'TYX'})
+   tifffile.imsave(Protein_Image_Name,best_Image_Intensity.astype('uint16'),bigtiff=True,metadata={'axes': 'TYX'})
 

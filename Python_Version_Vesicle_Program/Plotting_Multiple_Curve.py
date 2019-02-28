@@ -58,7 +58,7 @@ sns.set_context("paper", font_scale=1.5, rc={"font.size":14,"axes.labelsize":15}
 ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_one,label='%s (n = %d)' %(label_1, df_final_one_len))
 ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_two,label='%s (n = %d)' %(label_2, df_final_two_len))
 ax.set_xlabel('Time Points (min)', fontweight = 'bold') 
-ax.set_ylabel('C2 Membrane Bindings', fontweight = 'bold')
+ax.set_ylabel('PKC C2 Membrane Bindings', fontweight = 'bold')
 #ax= sns.lineplot(x='Time Point', y='GFP intensity', data = df_final_three)
 #ax.set_title("%s and %s Binding Profile" %(label_1, label_2))
 
