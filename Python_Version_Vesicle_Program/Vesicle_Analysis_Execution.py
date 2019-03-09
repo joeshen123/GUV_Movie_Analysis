@@ -6,6 +6,7 @@ import pickle
 import warnings
 from tkinter import simpledialog
 
+
 #Make a colormap like Imagej Green Channel
 cdict1 = {'red':  ((0.0, 0.0, 0.0),   # <- at 0.0, the red component is 0
                    (0.5, 0.0, 0.0),   # <- at 0.5, the red component is 1

@@ -47,16 +47,16 @@ def find_perfect_plane(img_stack):
         circle_num = circle.shape[1]
         circle_num_list.append((n,circle_num))
       
-      #else:
-         #circle_num_list.append((n,0))
+      else:
+         circle_num_list.append((n,0))
    
 
    circle_num_list = sorted(circle_num_list, key = lambda element: element[1], reverse = True)
    
-   top_2 = circle_num_list[:2]
+   top_7 = circle_num_list[:7]
 
       
-   slice_list = [x[0] for x in top_2]
+   slice_list = [x[0] for x in top_7]
       
     
    return slice_list
@@ -128,10 +128,10 @@ def Z_Stack_Images_Extractor(address, fields_of_view):
      s.configure("LabeledProgressbar", text='%d / %d   ' %(n, time_series))
      progress.update()
 
-
-
    MI_Slice = np.array(MI_Slice)
    Intensity_best_Slice = np.array(Intensity_best_Slice)
+
+   progress.destroy()
 
    return (MI_Slice, Intensity_best_Slice)
 
@@ -161,6 +161,6 @@ for n in range(len(FOV_list)):
    MI_Images = MI_Image_list[n]
    best_Image_Intensity = best_Image_Intensity_list[n]
 
-   tifffile.imsave(GUV_Image_Name,MI_Images.astype('uint16'),bigtiff=True,metadata={'axes': 'TYX'})
-   tifffile.imsave(Protein_Image_Name,best_Image_Intensity.astype('uint16'),bigtiff=True,metadata={'axes': 'TYX'})
+   tifffile.imsave(GUV_Image_Name,MI_Images.astype('uint16'),imagej=True,bigtiff=True,metadata={'axes': 'TYX'})
+   tifffile.imsave(Protein_Image_Name,best_Image_Intensity.astype('uint16'),imagej=True,bigtiff=True,metadata={'axes': 'TYX'})
 

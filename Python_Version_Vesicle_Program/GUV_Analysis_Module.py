@@ -267,7 +267,7 @@ def obtain_ring_pixel(center,radius,dif,image,choice='global'):
       median_intensity_from_img = raw_median_intensity_from_img - background_median_intensity
 
     elif choice == 'global':
-      kernel=cv2.getStructuringElement(cv2.MORPH_RECT,(100,100))
+      kernel=cv2.getStructuringElement(cv2.MORPH_RECT,(50,50))
       opening = cv2.morphologyEx(image, cv2.MORPH_OPEN, kernel)
       sub_image = cv2.subtract(image,opening)
       

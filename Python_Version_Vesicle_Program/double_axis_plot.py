@@ -27,7 +27,7 @@ GFP_Intensity = df['GFP intensity'].values
 fig, ax1 = plt.subplots()
 
 ax1.set_xlabel('Time Points (min)', fontsize = 16, fontweight = 'bold')
-ax1.set_ylabel('5-Lox Plat Bindings', fontsize = 16,fontweight = 'bold',color ='r')
+ax1.set_ylabel('C2 Membrane Bindings', fontsize = 16,fontweight = 'bold',color ='r')
 
 plt1 = ax1.plot(Time, GFP_Intensity, 'r-')
 ax1.tick_params(axis = 'y', labelcolor = 'r')
@@ -40,7 +40,7 @@ plt2 = ax2.plot(Time, radius, 'b-')
 ax2.tick_params(axis = 'y', labelcolor = 'b')
 
 plt_total = plt1 + plt2
-ax1.legend(plt_total,('5-Lox Plat Bindings','Radius'),loc=0)
+ax1.legend(plt_total,('C2 Membrane Bindings','Radius'),loc=0, fontsize='xx-large', title_fontsize='90')
 
 fig.tight_layout()
 plt.show()

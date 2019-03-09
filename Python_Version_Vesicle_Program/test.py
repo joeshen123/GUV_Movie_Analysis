@@ -18,7 +18,8 @@ from skimage import exposure
 from tkinter import simpledialog
 from matplotlib import cm
 from GUV_Analysis_Module import *
-'''
+import cell_segmentation as cellseg
+
 #from GUV_Analysis_Module import *
 
 #Ignore warnings issued by skimage through conversion to uint8
@@ -36,7 +37,7 @@ Original_Image_path = filedialog.askopenfilename(title='Please Select a File', f
 
 img_stack = io.imread(Original_Image_path)
 
-
+'''
 
 def find_perfect_plane(img_stack):
    stack_len = img_stack.shape[0]
@@ -114,12 +115,28 @@ new_viewer += lineprofile.LineProfile()
 #new_viewer += Measure()
 #new_viewer += CannyPlugin()
 new_viewer.show() 
+'''
+cl1, gaussian_blur_cl1, segmented_zlevel, centers = cellseg.enhance_blur_segment(img_stack[0,:,:],enhance = True, blur = True, kernel = 21, n_intensities = 2)
 
-img = img_as_ubyte(img_stack[19,:,:])
+labeled = cellseg.watershedsegment(segmented_zlevel,smooth_distance = True,kernel = 11)
+
+zlevel_image_color_regions  = cellseg.draw_contours(labeled,img_stack[0,:,:], with_labels = True, color = (255,0,0),width = 3 )
+
+
+plt.imshow(cl1)
+plt.show()
+
+plt.imshow(segmented_zlevel)
+plt.show()
+
+plt.imshow(labeled)
+plt.show()
+'''
+img = img_as_ubyte(img_stack[23,:,:])
 #img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 img = cv2.normalize(img,None,alpha=0, beta=255,norm_type=cv2.NORM_MINMAX)
 img = cv2.equalizeHist(img)
-img = cv2.GaussianBlur(img,(7,7),0,0)
+img = cv2.GaussianBlur(img,(11,11),0,0)
 plt.imshow(img)
 plt.show()
 
@@ -136,7 +153,10 @@ for i in circles[0,:]:
 cv2.imshow('detected circles',img)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
+'''
 
+
+'''
 _,_,img = enhance_blur_medfilter(img_stack[a,:,:],median_filter=False)
 plt.imshow(img)
 plt.show()
@@ -157,7 +177,6 @@ print(int_list)
 cmap_reversed = cm.get_cmap('Greens_r')
 plt.imshow(img_stack[20,:,:], cmap=cmap_reversed)
 plt.show()
-'''
 
 # Uncomment the next two lines if you want to save the animation
 #import matplotlib
@@ -284,3 +303,4 @@ simulation = animation.FuncAnimation(f0, updateData, blit=False, frames=200, int
 #simulation.save(filename='sim.mp4',fps=30,dpi=300)
 
 plt.show()
+'''
