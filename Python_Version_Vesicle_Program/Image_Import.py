@@ -1,7 +1,7 @@
-from nd2reader.reader import ND2Reader
+rom nd2reader.reader import ND2Reader
 import numpy as np
 import time
-from tqdm import tqdm
+from tkinter import ttk
 from tkinter import simpledialog
 from tkinter import filedialog
 import tkinter as tk
@@ -41,16 +41,23 @@ def find_perfect_plane(img_stack):
    
       circles = cv2.HoughCircles(img,cv2.HOUGH_GRADIENT,0.1,20,
                                  param1=200,param2=30,minRadius=0,maxRadius=80)
-    
+   
       if not (circles is None):
         circle = np.uint16(np.around(circles))
         circle_num = circle.shape[1]
         circle_num_list.append((n,circle_num))
       
-      circle_num_list = sorted(circle_num_list, key = lambda element: element[1], reverse = True)
-      top_3 = circle_num_list[:5]
+      else:
+         circle_num_list.append((n,0))
+   
+
+   circle_num_list = sorted(circle_num_list, key = lambda element: element[1], reverse = True)
+   
+   top_7 = circle_num_list[:7]
+
       
-      slice_list = [x[0] for x in top_3]
+   slice_list = [x[0] for x in top_7]
+      
     
    return slice_list
 
@@ -67,7 +74,32 @@ def Z_Stack_Images_Extractor(address, fields_of_view):
    MI_Slice = []
 
    n = 0
-   for time in tqdm(range(time_series)):
+
+   # create progress bar
+   windows = tk.Tk()
+   windows.title("Extracting Best Fitting Plane")
+   s = ttk.Style(windows)
+   
+   s.layout("LabeledProgressbar",
+         [('LabeledProgressbar.trough',
+           {'children': [('LabeledProgressbar.pbar',
+                          {'side': 'left', 'sticky': 'ns'}),
+                         ("LabeledProgressbar.label",
+                          {"sticky": ""})],
+           'sticky': 'nswe'})])
+
+   progress = ttk.Progressbar(windows, orient = 'horizontal', length = 1000, mode = 'determinate',style = "LabeledProgressbar")
+   s.configure("LabeledProgressbar", text="0 / %d     ", troughcolor ='white', background='red')
+
+   progress.grid()
+   progress.pack(side=tk.TOP)
+   progress['maximum'] = time_series
+
+   progress['value'] = n
+   
+   progress.update_idletasks()
+
+   for time in range(time_series):
      z_stack_images = [] 
      z_stack_Intensity_images = []
      for z_slice in range(z_stack):
@@ -84,32 +116,50 @@ def Z_Stack_Images_Extractor(address, fields_of_view):
      
      if n <= 5:
         best_list = find_perfect_plane(z_stack_images)
+
      
      best_intensity = np.array([z_stack_Intensity_images[n,:,:] for n in best_list])
 
      Intensity_best_Slice.append(np.max(best_intensity, axis = 0))
      
      n+=1
+     progress['value'] = n
 
+     s.configure("LabeledProgressbar", text='%d / %d   ' %(n, time_series))
+     progress.update()
 
    MI_Slice = np.array(MI_Slice)
    Intensity_best_Slice = np.array(Intensity_best_Slice)
 
+   progress.destroy()
+
    return (MI_Slice, Intensity_best_Slice)
 
-FOV_num = simpledialog.askinteger("Input", "Which fields of view number you want to put ?",
-                                parent=root, minvalue = 0, maxvalue = 100)
 
-FOV_num = FOV_num - 1
+Image_Sequence = ND2Reader(Image_Stack_Path)
+FOV_list = Image_Sequence.metadata['fields_of_view']
 
-MI_Images, best_Image_Intensity = Z_Stack_Images_Extractor(Image_Stack_Path,fields_of_view=FOV_num)
+MI_Image_list = []
+best_Image_Intensity_list = []
+
+for fov in FOV_list:
+   MI_Images, best_Image_Intensity = Z_Stack_Images_Extractor(Image_Stack_Path,fields_of_view=fov)
+   MI_Image_list.append(MI_Images)
+   best_Image_Intensity_list.append(best_Image_Intensity)
+
 
 
 #Save Max Intensity Images to tiff hyperstack for furthur analysis
 
 File_save_names = filedialog.asksaveasfilename(parent=root,title="Please select a file name for saving:",filetypes=[('Image Files', '.tif')])
-File_save_names_Intensity = File_save_names.replace(".tif", "_Intensity.tif")
 
-tifffile.imsave(File_save_names,MI_Images.astype('uint16'),bigtiff=True,metadata={'axes': 'TYX'})
-tifffile.imsave(File_save_names_Intensity,best_Image_Intensity.astype('uint16'),bigtiff=True,metadata={'axes': 'TYX'})
 
+for n in range(len(FOV_list)):
+   GUV_Image_Name='{File_Name}_{num}.tif'.format(File_Name = File_save_names, num = n + 1)
+   Protein_Image_Name = '{File_Name}_{num}_Intensity.tif'.format(File_Name = File_save_names, num = n + 1)
+
+   MI_Images = MI_Image_list[n]
+   best_Image_Intensity = best_Image_Intensity_list[n]
+
+   tifffile.imsave(GUV_Image_Name,MI_Images.astype('uint16'),imagej=True,bigtiff=True,metadata={'axes': 'TYX'})
+   tifffile.imsave(Protein_Image_Name,best_Image_Intensity.astype('uint16'),imagej=True,bigtiff=True,metadata={'axes': 'TYX'})

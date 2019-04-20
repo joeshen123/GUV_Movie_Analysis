@@ -10,19 +10,54 @@ from skimage import filters
 from skimage import color
 from skimage import feature
 from skimage import morphology
-from tqdm import tqdm
 from scipy.misc import bytescale
 import pandas as pd
 import itertools
-from matplotlib.patches import Rectangle
 from matplotlib.animation import ArtistAnimation
 from matplotlib import gridspec
 from matplotlib.pyplot import cm
 from skimage.filters import threshold_otsu, threshold_adaptive
 import tkinter as tk
+from tkinter import ttk
 from tkinter import filedialog
 from skimage import measure
 import seaborn as sns
+from tqdm import tqdm
+from colorama import Fore
+from matplotlib.colors import LinearSegmentedColormap
+from skimage import img_as_ubyte
+
+#Make a colormap like Imagej Green Channel
+cdict1 = {'red':  ((0.0, 0.0, 0.0),   # <- at 0.0, the red component is 0
+                   (0.5, 0.0, 0.0),   # <- at 0.5, the red component is 1
+                   (1.0, 0.0, 0.0)),  # <- at 1.0, the red component is 0
+
+         'green': ((0.0, 0.0, 0.0),   # <- etc.
+                   (0.5, 0.5, 0.5),
+                   (1.0, 1.0, 1.0)),
+
+         'blue':  ((0.0, 0.0, 0.0),
+                   (0.5, 0.0, 0.0),
+                   (1.0, 0.0, 0.0))
+         }
+
+Green = LinearSegmentedColormap('Green', cdict1)
+
+#Make a colormap like Imagej Red Channel
+cdict2 = {'red':  ((0.0, 0.0, 0.0),   # <- at 0.0, the red component is 0
+                   (0.5, 0.5, 0.5),   # <- at 0.5, the red component is 1
+                   (1.0, 1.0, 1.0)),  # <- at 1.0, the red component is 0
+
+         'green': ((0.0, 0.0, 0.0),   # <- etc.
+                   (0.5, 0.0, 0.0),
+                   (1.0, 0.0, 0.0)),
+
+         'blue':  ((0.0, 0.0, 0.0),
+                   (0.5, 0.0, 0.0),
+                   (1.0, 0.0, 0.0))
+         }
+
+Red = LinearSegmentedColormap('Red', cdict2)
 
 
 # define a function to find the border of a circle (assume the edge is the brightest)
@@ -54,6 +89,7 @@ def circle_edge_detector(center, distance, image):
 
 
     edge_list = np.column_stack([np.array(y_edge_list),np.array(x_edge_list)])
+
 
     return edge_list
 
@@ -165,7 +201,7 @@ def draw_sample_points (image,Position,distance):
 
     edges = feature.canny(closing_im,sigma=0.5)
     edges = edges * mask
-
+    
     points = np.column_stack(np.nonzero(edges))
 
 
@@ -196,7 +232,6 @@ def enhance_blur_medfilter(img, enhance=True,blur=True,kernal=5,median_filter=Tr
 
 def fit_circle_contour(image,pt,width=20,height=20):
     sample_points = circle_edge_detector(pt,width, image)
-
     #print(sample_points)
     #print(len(sample_points))
     
@@ -217,12 +252,7 @@ def obtain_ring_pixel(center,radius,dif,image,choice='global'):
     ring_mask = np.logical_xor(outer_ring_mask,inner_ring_mask)
 
     where = np.where(ring_mask==True)
-    '''
-    a = image.copy()
-    a[where[0],where[1]] = 65535
-    plt.imshow(a)
-    plt.show()
-    '''
+    
     if choice == 'local':
       raw_median_intensity_from_img = np.median(image[where[0],where[1]])
 
@@ -237,7 +267,7 @@ def obtain_ring_pixel(center,radius,dif,image,choice='global'):
       median_intensity_from_img = raw_median_intensity_from_img - background_median_intensity
 
     elif choice == 'global':
-      kernel=cv2.getStructuringElement(cv2.MORPH_RECT,(100,100))
+      kernel=cv2.getStructuringElement(cv2.MORPH_RECT,(50,50))
       opening = cv2.morphologyEx(image, cv2.MORPH_OPEN, kernel)
       sub_image = cv2.subtract(image,opening)
       
@@ -247,29 +277,21 @@ def obtain_ring_pixel(center,radius,dif,image,choice='global'):
     return median_intensity_from_img
 
 def draw_circle_fit (center,r ,image):
-    fig,ax = plt.subplots()
-    ax.imshow(image)
-    circle = Circle(center,radius=r,facecolor=None,fill=False,edgecolor='r',linewidth=2)
-    ax.add_patch(circle)
-    plt.scatter(center[0],center[1],c = 'r')
-    ax.axis('off')
-    fig.canvas.draw()
-
-    img = np.array(fig.canvas.renderer._renderer)
-
-    plt.close()
+    Plot_center = (int(np.ceil(center[0])),int(np.ceil(center[1])))
+    
+    img = cv2.circle(image, Plot_center, int(np.ceil(r)), 0,2)
+    
     return img
 
-def display_image_sequence(image_stack,string):
+def display_image_sequence(image_stack,cmap_name):
    stack_len = len(image_stack)
    #print(image_stack.shape)
    img = None
-   image_length = tqdm(range(stack_len))
-   for i in image_length:
-     image_length.set_description(string)
+
+   for i in range(stack_len):
      im = image_stack[i]
      if img is None:
-        img = pylab.figimage(im)
+        img = pylab.figimage(im, cmap = cmap_name)
      else:
         img.set_data(im)
      pylab.pause(.1)
@@ -286,7 +308,6 @@ class Image_Stacks:
          self.Intensity_stack = GFP_image.copy()
          self.Intensity_stack_med = np.zeros(GFP_image.shape)
          self.Image_stack_median = np.zeros(vesicle_image.shape)
-         self.Image_stack_median_circle_patch = np.zeros(vesicle_image.shape)
          self.Rendering_Image_Stack = []
          self.Rendering_Intensity_Image = []
          self.Crop_Original_Stack = []
@@ -298,11 +319,14 @@ class Image_Stacks:
          self.median_filter = None
          self.size = None
          self.point = None
+         self.point_list = None
          self.end = None
-         self.stats_df = None
+         self.stats_df_list = []
          self.width = None
          self.height = None
          self.line_ani = None
+         self.render_image_temp = None
+         self.render_image_intensity_temp = None
 
         
      def set_parameter (self,enhance=True, blur = True, kernal = 5,median_filter = True,size=3):
@@ -318,7 +342,7 @@ class Image_Stacks:
          line_selection.draw_line()
          plt.show()
 
-         self.point = line_selection.center
+         self.point_list = line_selection.center
          self.end = line_selection.end
 
          self.width = line_selection.dist
@@ -327,8 +351,11 @@ class Image_Stacks:
 
      def stack_enhance_blur(self):
          num_len = self.Image_stack.shape[0]
+         
+         pb = tqdm(range(num_len), bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.BLUE, Fore.RESET))
 
-         for n in range(num_len):
+         for n in pb:
+            pb.set_description ('Preprosessing Image Stack')
             img = self.Image_stack[n].copy()
             intensity_img = self.Intensity_stack[n].copy()
             _, _,medfilter = enhance_blur_medfilter(img, self._enhance,self._blur,self._kernal,self.median_filter,self.size)
@@ -336,143 +363,146 @@ class Image_Stacks:
 
             self.Image_stack_median[n] = medfilter
             self.Intensity_stack_med[n] = medfilter_intensity
-    
-     def reuse_preprocessed_stack (self):
-        self.Intensity_stack_med = self.Intensity_stack
-        self.Image_stack_median = self.Image_stack
+            
 
-     def tracking_single_circle(self):
+     def tracking_single_circle(self,num):
         num_len = self.Image_stack_median.shape[0]
         center_list = []
         r_list = []
         GFP_list = []
-        iter_len = tqdm(range(num_len))
-        for n in iter_len:
-            iter_len.set_description('Fitting circle to original image')
+        self.point = self.point_list[num]
+
+        for n in range(num_len):
             
             try:
-                center,r = fit_circle_contour(self.Image_stack_median[n], self.point, self.width,self.height)
+             center,r = fit_circle_contour(self.Image_stack_median[n], self.point, self.width[num],self.height[num])
+        
             
             except:
                 pass
+                print('Exception Raised!')
                 center = self.point
-                r = r_list[-1]
-                
+                if n != 0:
+                  r = r_list[-1]
+                else:
+                  print('None Exception')
+                  r = self.width[num]
+
+            
             self.point = center
             center_list.append(center)
             r_list.append(r)
         
-        iter_len = tqdm(range(num_len))
-        for n in iter_len:
-            iter_len.set_description('Measuring GFP Intensities')
+        for n in range(num_len):
             Intensity = obtain_ring_pixel(center_list[n],r_list[n],1.5,self.Intensity_stack_med[n], choice='global')
             GFP_list.append(Intensity)
 
-        self.stats_df = generate_df_from_list(self.Micron_Pixel, center_list,r_list,GFP_list)
+        stats_df = generate_df_from_list(self.Micron_Pixel, center_list,r_list,GFP_list)
+
+        return stats_df
+     
+     # Design functions to track multiple circles based on single circle tracking function
+     def tracking_multiple_circles(self):
+        num = len(self.point_list)
+        
+        pb = tqdm(range(num), bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.RED, Fore.RESET))
+        for n in pb:
+           pb.set_description("Fitting Circles on GUV and Measure Protein Fluorescence")
+           df = self.tracking_single_circle(n)
+           self.stats_df_list.append(df)
 
 
 
+        
+
+
+    # Generating Stacks to display as animation later
      def displaying_circle_movies(self):
+        total_circle_list= []
 
-        single_circles = self.stats_df[['center_x','center_y','radius']].values.tolist()
+        for df in self.stats_df_list:
+          single_circles = df[['center_x','center_y','radius']].values.tolist()
+          total_circle_list.append(single_circles)
 
         num_len = self.Image_stack_median.shape[0]
+        
+        pb = tqdm(range(num_len), bar_format="{l_bar}%s{bar}%s{r_bar}" % (Fore.GREEN, Fore.RESET))
 
-        list_len = tqdm(range(num_len))
+        for n in pb:
+          pb.set_description("Generating Image Stack Movies")
+          self.render_image_intensity_temp =  self.Intensity_stack_med[n].copy()
+          self.render_image_temp = self.Image_stack_median[n].copy()
 
-        for n in list_len:
-            list_len.set_description('Generating Rendering Images')
-            original_image = self.Image_stack_median[n].copy()
-            intensity_based_image = self.Intensity_stack_med[n].copy()
+          for single_circles in total_circle_list:
             center = (single_circles[n][0],single_circles[n][1])
             r = single_circles[n][2]
 
-            #add the circles to original GUV image
-            Plot_center = (int(center[0]),int(center[1]))
-            self.Image_stack_median_circle_patch[n] = self.Image_stack_median[n].copy()
-            self.Image_stack_median_circle_patch[n] = cv2.circle(self.Image_stack_median_circle_patch[n], Plot_center, int(r), (0,0,0),-1)
+            self.render_image_temp = draw_circle_fit(center,r,self.render_image_temp)
+            self.render_image_intensity_temp = draw_circle_fit(center,r, self.render_image_intensity_temp)
 
-            Rendering_Image = draw_circle_fit(center,r,original_image)
-            Rendering_Intensity_Image = draw_circle_fit(center,r,intensity_based_image)
-
-            Crop_Original_Image = crop_image(original_image, center, r, r)
+            #Crop_Original_Image = crop_image(original_image, center, r, r)
             #print(Crop_Original_Image.shape)
-            Crop_Intensity_Image = crop_image(intensity_based_image, center, r, r)
+            #Crop_Intensity_Image = crop_image(intensity_based_image, center, r, r)
 
-            self.Rendering_Image_Stack.append(Rendering_Image)
-            self.Rendering_Intensity_Image.append(Rendering_Intensity_Image)
+          self.Rendering_Image_Stack.append(self.render_image_temp)
+          self.Rendering_Intensity_Image.append(self.render_image_intensity_temp)
 
-            self.Crop_Original_Stack.append(Crop_Original_Image)
-            self.Crop_Intensity_Stack.append(Crop_Intensity_Image)
-
-        #self.Rendering_Image_Stack = np.array(self.Rendering_Image_Stack)
-        #self.Rendering_Intensity_Image = np.array(self.Rendering_Intensity_Image)
+            #self.Crop_Original_Stack.append(Crop_Original_Image)
+            #self.Crop_Intensity_Stack.append(Crop_Intensity_Image)
+    
+        self.Rendering_Image_Stack = np.array(self.Rendering_Image_Stack)
+        self.Rendering_Intensity_Image = np.array(self.Rendering_Intensity_Image)
 
         #self.Crop_Original_Stack = np.array(self.Crop_Original_Stack)
         #self.Crop_Intensity_Stack = np.array(self.Crop_Intensity_Stack)
 
+'''
     # Define a function to live plot the protein intesnity data
      def live_plotting_intensity(self):
-       Intensity_data = self.stats_df['GFP intensity'].tolist()
-       Radius_data = self.stats_df['radius'].tolist()
+       Intensity_data = self.stats_df_list[0]['GFP intensity'].tolist()
+       Radius_data = self.stats_df_list[0]['radius'].tolist()
        Time_point = np.arange(len(Intensity_data))
-
        Intensity_with_Time = []
        Intensity_with_Time.append(Time_point)
        Intensity_with_Time.append(Intensity_data)
        Intensity_with_Time = np.array(Intensity_with_Time)
-
        Radius_with_Time = []
        Radius_with_Time.append(Time_point)
        Radius_with_Time.append(Radius_data)
        Radius_with_Time = np.array(Radius_with_Time)
-
        gs = gridspec.GridSpec(2,2)
        fig = plt.figure(figsize = (10,10))
        ax1 = fig.add_subplot(gs[0:1,0:1])
        ax2 = fig.add_subplot(gs[0:1,1:2])
        ax3 = fig.add_subplot(gs[1:2,:])
-
        ax1.set_title('GUV Radius Changes',fontsize=18)
        ax2.set_title('Peripheral Protein Bindings Changes',fontsize=18)
-
-
        ax3.set_xlabel('Time Points (min)', fontsize = 16, fontweight = 'bold')
        ax3.set_ylabel('Protein Fluorescence Intensity', fontsize = 16,fontweight = 'bold')
        ax3.set_xlim(0,(len(Intensity_data)+1))
        ax3.set_ylim(0,(np.max(Intensity_data)+300))
        #l_one, =ax3.plot([], [], 'r-')
-
        ax4= ax3.twinx()
        #l_two, =ax4.plot([], [], 'b-')
-
        ax4.set_xlabel('Time Points (min)', fontsize = 16, fontweight = 'bold')
        ax4.set_ylabel('Radius Changes (um)',fontsize = 16, fontweight = 'bold')
        ax4.set_xlim(0,(len(Radius_data)+1))
        ax4.set_ylim((np.min(Radius_data)-1),(np.max(Radius_data)+1))
-
        #self.line_ani= FuncAnimation(fig, update_line, frames = len(Intensity_data), fargs=(Intensity_with_Time,Radius_with_Time,l_one,l_two),interval=100, blit=True, repeat=False)
-
        ims = []
-
        for time in range(len(Intensity_data)):
            GUV_im = ax1.imshow(self.Crop_Original_Stack[time],cmap = 'Reds')
            ax1.axis('off')
            Intensity_im = ax2.imshow(self.Crop_Intensity_Stack[time],cmap = 'Greens')
            ax2.axis('off')
-
            l_one, = ax3.plot(Intensity_with_Time[0,:time],Intensity_with_Time[1,:time],'r-')
            l_two, = ax4.plot(Radius_with_Time[0,:time],Radius_with_Time[1,:time],'b-')
            ax3.legend((l_one,l_two),('Protein Fluorescence Intensity','Radius'),loc=0)
-
-
            ims.append([GUV_im,Intensity_im,l_one,l_two])
-
        self.line_ani = ArtistAnimation(fig,ims, interval=50,blit=False,repeat=True)
        plt.tight_layout()
-
        plt.show()
-
+    '''
 
 
 # Define a class for drawing a line for tracking
@@ -485,61 +515,61 @@ class line_drawing():
         self.y1 = None
         self.center = None
         self.end = None
-        self.dist = None
+        self.dist = []
         self.lines = []
 
     def show_image(self,image):
         self.fig, self.ax = plt.subplots()
-        self.ax.imshow(image[0,:,:])
+        self.ax.imshow(image[0,:,:], cmap= Red)
 
     def draw_line(self):
 
-        xy = self.fig.ginput(2,timeout=0)
-        x = np.array([p[0] for p in xy])
-        self.x0 = x[0]
-        self.x1 = x[1]
+        xy = self.fig.ginput(-1,timeout=0)
+        x = [p[0] for p in xy]
+        self.x0 = x[::2]
+        self.x1 = x[1::2]
 
-        y = np.array([p[1] for p in xy])
-        self.y0 = y[0]
-        self.y1 = y[1]
+        y = [p[1] for p in xy]
+        self.y0 = y[::2]
+        self.y1 = y[1::2]
 
-        self.center = (self.x0,self.y0)
-
-        self.end = (self.x1,self.y1)
-
-        line = plt.plot(x,y,'r-')
+        self.center = list(zip(self.x0, self.y0))
+        self.end = list(zip(self.x1,self.y1))
+        
+        for n in range(len(self.x0)):
+           line = plt.plot((self.x0[n],self.x1[n]),(self.y0[n],self.y1[n]),'w-')
+           self.lines.append(line)
 
         self.ax.figure.canvas.draw()
+        
+        for n in range(len(self.center)):
+           dist = np.linalg.norm(np.array(self.center[n]) - np.array(self.end[n]))
+           self.dist.append(dist)
 
-        self.dist = np.linalg.norm(np.array(self.center) - np.array(self.end))
-
-        self.lines.append(line)
+        
 '''
 root = tk.Tk()
 root.withdraw()
-
 my_filetypes = [('all files', '.*'),('Image files', '.tif')]
-
 Original_Image_path = filedialog.askopenfilename(title='Please Select a File', filetypes = my_filetypes)
  
-
 im = io.imread(Original_Image_path)
-
-
 line_selection = line_drawing()
 line_selection.show_image(im)
 line_selection.draw_line()
 plt.show()
-
-list = circle_edge_detector(line_selection.center,line_selection.dist,im[11,:,:])
-
-y,x= zip(*list)
-
-center,r = fit_circle_contour(im[11,:,:],line_selection.center,line_selection.dist,line_selection.dist)
+num = len(line_selection.center)
+circle_list = []
 fig,ax = plt.subplots()
-ax.imshow(im[11,:,:])
-circle = Circle(center,radius=r,facecolor=None,fill=False,edgecolor='b',linewidth=2)
-ax.add_patch(circle)
-plt.scatter(x,y,c = 'r')
+ax.imshow(im[0,:,:])
+for n in range(num):
+   list = circle_edge_detector(line_selection.center[n],line_selection.dist[n],im[0,:,:])
+   y,x= zip(*list)
+   center,r = fit_circle_contour(im[0,:,:],line_selection.center[n],line_selection.dist[n],line_selection.dist[n])
+   circle = Circle(center,radius=r,facecolor=None,fill=False,edgecolor='b',linewidth=2)
+   circle_list.append(circle)
+   #plt.scatter(x,y,c = 'r')
+for c in circle_list:
+  ax.add_patch(c)
 plt.show()
 '''
